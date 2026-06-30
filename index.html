@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nojespark 3D - FPS</title>
+  <style>
+    :root {
+      --sky-top: #89c7f2;
+      --sky-bottom: #e9f7ff;
+      --ui-bg: rgba(10, 20, 18, 0.72);
+      --ui-border: rgba(255, 255, 255, 0.3);
+      --ui-text: #f2fff5;
+      --ok: #9be0ad;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(var(--sky-top), var(--sky-bottom));
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--ui-text);
+    }
+
+    #app { position: fixed; inset: 0; }
+    canvas { width: 100%; height: 100%; display: block; }
+
+    .hud {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--ui-border);
+      background: var(--ui-bg);
+      backdrop-filter: blur(4px);
+      max-width: min(92vw, 520px);
+      line-height: 1.35;
+      font-size: 14px;
+    }
+
+    .hud h1 { margin: 0 0 6px; font-size: 16px; }
+    #bootStatus { color: var(--ok); }
+
+    #crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      margin-left: -5px;
+      margin-top: -5px;
+      border: 1px solid rgba(255,255,255,0.8);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 8;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="crosshair"></div>
+
+  <div class="hud">
+    <h1>Nojespark 3D - FPS</h1>
+    <div>Entrepris: $5 per person.</div>
+    <div>WASD = ga, mus = titta, Shift = spring, N = dag/natt, E = fireworks.</div>
+    <div>Ny attraktion: berg-och-dalbana med rorlig vagn.</div>
+    <div>Klicka i varlden for att lasa mus. Esc slapper musen.</div>
+    <div id="bootStatus">Startar WebGL...</div>
+    <div id="gateStatus">Entresparr: stangd</div>
+    <div id="fireworkStatus">Fireworkplats: ga till vanster sida i parken.</div>
+  </div>
+
+  <script>
+    const container = document.getElementById('app');
+    const bootStatus = document.getElementById('bootStatus');
+    const gateStatus = document.getElementById('gateStatus');
+    const fireworkStatus = document.getElementById('fireworkStatus');
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+
+    const gl = canvas.getContext('webgl', { antialias: true });
+    if (!gl) {
+      bootStatus.textContent = 'WebGL saknas i webblasaren.';
+      bootStatus.style.color = '#ffd4d4';
+      throw new Error('WebGL not supported');
+    }
+
+    const vsSource = `
+      attribute vec3 aPos;
+      attribute vec3 aNormal;
+      uniform mat4 uModel;
+      uniform mat4 uView;
+      uniform mat4 uProj;
+      varying vec3 vWorldPos;
+      varying vec3 vNormal;
+      void main() {
+        vec4 world = uModel * vec4(aPos, 1.0);
+        vWorldPos = world.xyz;
+        vNormal = mat3(uModel) * aNormal;
+        gl_Position = uProj * uView * world;
+      }
+    `;
+
+    const fsSource = `
+      precision mediump float;
+
+      uniform vec3 uBaseColor;
+      uniform vec3 uLightDir;
+      uniform vec3 uCamPos;
+      uniform float uMatType;
+      uniform float uNight;
+      uniform vec3 uLampPos0;
+      uniform vec3 uLampPos1;
+      uniform vec3 uLampPos2;
+      uniform vec3 uLampPos3;
+
+      varying vec3 vWorldPos;
+      varying vec3 vNormal;
+
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+      }
+
+      float lampLight(vec3 n, vec3 lampPos) {
+        vec3 toL = lampPos - vWorldPos;
+        float d = length(toL);
+        vec3 l = toL / max(d, 0.001);
+        float diff = max(dot(n, l), 0.0);
+        float att = 1.0 / (1.0 + 0.11 * d + 0.03 * d * d);
+        return diff * att;
+      }
+
+      void main() {
+        vec3 n = normalize(vNormal);
+        vec3 viewDir = normalize(uCamPos - vWorldPos);
+        vec3 sunDir = normalize(-uLightDir);
+
+        vec3 color = uBaseColor;
+
+        if (uMatType < 1.5) {
+          float blade = sin(vWorldPos.x * 0.18) * sin(vWorldPos.z * 0.22);
+          float grain = hash(vWorldPos.xz * 0.38);
+          color *= 0.82 + blade * 0.1 + grain * 0.15;
+        } else if (uMatType < 2.5) {
+          float stone = sin(vWorldPos.x * 1.15) * sin(vWorldPos.z * 0.95);
+          float p = hash(vWorldPos.xz * 1.5);
+          color *= 0.92 + stone * 0.06 + p * 0.07;
+        } else if (uMatType < 3.5) {
+          float wood = sin(vWorldPos.y * 5.0 + vWorldPos.x * 0.2) * 0.12;
+          color *= 0.9 + wood;
+        } else if (uMatType < 4.5) {
+          float metal = sin(vWorldPos.x * 3.0 + vWorldPos.y * 2.5) * 0.05;
+          color *= 0.95 + metal;
+        }
+
+        float sun = max(dot(n, sunDir), 0.0);
+        float sunStrength = mix(0.95, 0.20, uNight);
+        float ambient = mix(0.34, 0.09, uNight);
+
+        vec3 halfDir = normalize(sunDir + viewDir);
+        float spec = pow(max(dot(n, halfDir), 0.0), mix(14.0, 6.0, uNight));
+        float specStrength = (uMatType > 3.5 && uMatType < 4.5) ? 0.35 : 0.08;
+
+        float lamps = 0.0;
+        lamps += lampLight(n, uLampPos0);
+        lamps += lampLight(n, uLampPos1);
+        lamps += lampLight(n, uLampPos2);
+        lamps += lampLight(n, uLampPos3);
+        lamps *= (0.35 + 1.75 * uNight);
+
+        if (uMatType > 4.5) {
+          vec3 emissive = uBaseColor * mix(0.18, 1.8, uNight);
+          float dist = distance(vWorldPos, uCamPos);
+          float fog = clamp((dist - 28.0) / 180.0, 0.0, 1.0);
+          vec3 fogColor = mix(vec3(0.80, 0.92, 1.0), vec3(0.05, 0.09, 0.18), uNight);
+          gl_FragColor = vec4(mix(emissive, fogColor, fog), 1.0);
+          return;
+        }
+
+        vec3 lit = color * (ambient + sun * sunStrength + lamps);
+        lit += vec3(spec * specStrength * (sunStrength + lamps * 0.8));
+
+        float dist = distance(vWorldPos, uCamPos);
+        float fog = clamp((dist - 42.0) / 210.0, 0.0, 1.0);
+        vec3 fogColor = mix(vec3(0.80, 0.92, 1.0), vec3(0.05, 0.09, 0.18), uNight);
+        lit = mix(lit, fogColor, fog);
+
+        gl_FragColor = vec4(lit, 1.0);
+      }
+    `;
+
+    function compileShader(type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(shader));
+      }
+      return shader;
+    }
+
+    const program = gl.createProgram();
+    gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vsSource));
+    gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fsSource));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(gl.getProgramInfoLog(program));
+    }
+
+    const aPos = gl.getAttribLocation(program, 'aPos');
+    const aNormal = gl.getAttribLocation(program, 'aNormal');
+
+    const uModel = gl.getUniformLocation(program, 'uModel');
+    const uView = gl.getUniformLocation(program, 'uView');
+    const uProj = gl.getUniformLocation(program, 'uProj');
+    const uBaseColor = gl.getUniformLocation(program, 'uBaseColor');
+    const uLightDir = gl.getUniformLocation(program, 'uLightDir');
+    const uCamPos = gl.getUniformLocation(program, 'uCamPos');
+    const uMatType = gl.getUniformLocation(program, 'uMatType');
+    const uNight = gl.getUniformLocation(program, 'uNight');
+    const uLampPos0 = gl.getUniformLocation(program, 'uLampPos0');
+    const uLampPos1 = gl.getUniformLocation(program, 'uLampPos1');
+    const uLampPos2 = gl.getUniformLocation(program, 'uLampPos2');
+    const uLampPos3 = gl.getUniformLocation(program, 'uLampPos3');
+
+    function makeMesh(interleaved) {
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(interleaved), gl.STATIC_DRAW);
+      return { buf, count: interleaved.length / 6 };
+    }
+
+    function triPush(out, p1, p2, p3, n) {
+      out.push(...p1, ...n, ...p2, ...n, ...p3, ...n);
+    }
+
+    function planeXZ(w, d) {
+      const hw = w / 2;
+      const hd = d / 2;
+      const n = [0, 1, 0];
+      const out = [];
+      triPush(out, [-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], n);
+      triPush(out, [-hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd], n);
+      return out;
+    }
+
+    function box(w, h, d) {
+      const x = w / 2;
+      const y = h / 2;
+      const z = d / 2;
+      const out = [];
+
+      triPush(out, [-x,-y, z], [ x,-y, z], [ x, y, z], [0,0,1]);
+      triPush(out, [-x,-y, z], [ x, y, z], [-x, y, z], [0,0,1]);
+
+      triPush(out, [ x,-y,-z], [-x,-y,-z], [-x, y,-z], [0,0,-1]);
+      triPush(out, [ x,-y,-z], [-x, y,-z], [ x, y,-z], [0,0,-1]);
+
+      triPush(out, [-x,-y,-z], [-x,-y, z], [-x, y, z], [-1,0,0]);
+      triPush(out, [-x,-y,-z], [-x, y, z], [-x, y,-z], [-1,0,0]);
+
+      triPush(out, [ x,-y, z], [ x,-y,-z], [ x, y,-z], [1,0,0]);
+      triPush(out, [ x,-y, z], [ x, y,-z], [ x, y, z], [1,0,0]);
+
+      triPush(out, [-x, y, z], [ x, y, z], [ x, y,-z], [0,1,0]);
+      triPush(out, [-x, y, z], [ x, y,-z], [-x, y,-z], [0,1,0]);
+
+      triPush(out, [-x,-y,-z], [ x,-y,-z], [ x,-y, z], [0,-1,0]);
+      triPush(out, [-x,-y,-z], [ x,-y, z], [-x,-y, z], [0,-1,0]);
+      return out;
+    }
+
+    function lineRing(radius, segments) {
+      const out = [];
+      for (let i = 0; i < segments; i += 1) {
+        const a = (i / segments) * Math.PI * 2;
+        const b = ((i + 1) / segments) * Math.PI * 2;
+        const p1 = [Math.cos(a) * radius, Math.sin(a) * radius, 0];
+        const p2 = [Math.cos(b) * radius, Math.sin(b) * radius, 0];
+        out.push(...p1, 0, 1, 0, ...p2, 0, 1, 0);
+      }
+      return out;
+    }
+
+    function lineSegment(x1, y1, z1, x2, y2, z2) {
+      return [x1,y1,z1, 0,1,0, x2,y2,z2, 0,1,0];
+    }
+
+    function lineFromPoints(points, closed) {
+      const out = [];
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        out.push(...p1, 0, 1, 0, ...p2, 0, 1, 0);
+      }
+      if (closed && points.length > 2) {
+        const p1 = points[points.length - 1];
+        const p2 = points[0];
+        out.push(...p1, 0, 1, 0, ...p2, 0, 1, 0);
+      }
+      return out;
+    }
+
+    function coasterPoint(t, railOffsetX) {
+      const a = t * Math.PI * 2;
+      const hill = Math.exp(-Math.pow((t - 0.18) * 6.0, 2)) * 9.5;
+      const valley = Math.exp(-Math.pow((t - 0.62) * 8.5, 2)) * 2.2;
+      const y = 3.2 + hill - valley + Math.sin(a * 4.0) * 0.55;
+      const x = -42 + Math.cos(a) * 22 + Math.sin(a * 3.0) * 3.2 + railOffsetX;
+      const z = -10 + Math.sin(a) * 16 + Math.cos(a * 2.0) * 2.2;
+      return [x, y, z];
+    }
+
+    const coasterSampleCount = 180;
+    const coasterLeftPoints = [];
+    const coasterRightPoints = [];
+    const coasterCenterPoints = [];
+    for (let i = 0; i < coasterSampleCount; i += 1) {
+      const t = i / coasterSampleCount;
+      coasterLeftPoints.push(coasterPoint(t, -0.9));
+      coasterRightPoints.push(coasterPoint(t, 0.9));
+      coasterCenterPoints.push(coasterPoint(t, 0));
+    }
+
+    const geom = {
+      ground: makeMesh(planeXZ(220, 220)),
+      path: makeMesh(planeXZ(8, 90)),
+      center: makeMesh(planeXZ(18, 18)),
+      post: makeMesh(box(1.2, 5.5, 1.2)),
+      beam: makeMesh(box(10.5, 1.1, 1.3)),
+      sign: makeMesh(box(8.4, 1.7, 0.35)),
+      support: makeMesh(box(1, 14, 1)),
+      axle: makeMesh(box(8.2, 0.35, 0.35)),
+      wheelBase: makeMesh(box(10.2, 0.8, 6.4)),
+      cabin: makeMesh(box(0.9, 0.8, 0.9)),
+      lampPost: makeMesh(box(0.28, 4.8, 0.28)),
+      lampHead: makeMesh(box(0.95, 0.55, 0.95)),
+      barrierBase: makeMesh(box(0.6, 1.6, 0.6)),
+      barrierArm: makeMesh(box(6.0, 0.22, 0.28)),
+      barrierLamp: makeMesh(box(0.36, 0.36, 0.36)),
+      coasterRailL: makeMesh(lineFromPoints(coasterLeftPoints, true)),
+      coasterRailR: makeMesh(lineFromPoints(coasterRightPoints, true)),
+      coasterSupport: makeMesh(box(1, 1, 1)),
+      coasterSleeper: makeMesh(box(1, 1, 1)),
+      coasterCart: makeMesh(box(1.5, 0.65, 1.0)),
+      fireworkPad: makeMesh(box(3.2, 0.35, 3.2)),
+      fireworkTube: makeMesh(box(0.38, 1.0, 0.38)),
+      fireworkParticle: makeMesh(box(1, 1, 1)),
+      ring: makeMesh(lineRing(6.2, 88)),
+      spoke: makeMesh(lineSegment(0, 0, 0, 6.2, 0, 0))
+    };
+
+    function m4Identity() {
+      return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+    }
+
+    function m4Mul(a, b) {
+      const o = new Array(16);
+      for (let r = 0; r < 4; r += 1) {
+        for (let c = 0; c < 4; c += 1) {
+          o[c * 4 + r] =
+            a[0 * 4 + r] * b[c * 4 + 0] +
+            a[1 * 4 + r] * b[c * 4 + 1] +
+            a[2 * 4 + r] * b[c * 4 + 2] +
+            a[3 * 4 + r] * b[c * 4 + 3];
+        }
+      }
+      return o;
+    }
+
+    function m4Translate(x, y, z) {
+      return [1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1];
+    }
+
+    function m4RotateZ(a) {
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      return [c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1];
+    }
+
+    function m4RotateY(a) {
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      return [c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1];
+    }
+
+    function m4Scale(x, y, z) {
+      return [x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1];
+    }
+
+    function m4Perspective(fov, aspect, near, far) {
+      const f = 1 / Math.tan(fov / 2);
+      const nf = 1 / (near - far);
+      return [
+        f / aspect,0,0,0,
+        0,f,0,0,
+        0,0,(far + near) * nf,-1,
+        0,0,(2 * far * near) * nf,0
+      ];
+    }
+
+    function v3Normalize(v) {
+      const len = Math.hypot(v[0], v[1], v[2]) || 1;
+      return [v[0] / len, v[1] / len, v[2] / len];
+    }
+
+    function v3Cross(a, b) {
+      return [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0]
+      ];
+    }
+
+    function m4LookAt(eye, target, up) {
+      const z = v3Normalize([eye[0] - target[0], eye[1] - target[1], eye[2] - target[2]]);
+      const x = v3Normalize(v3Cross(up, z));
+      const y = v3Cross(z, x);
+      return [
+        x[0], y[0], z[0], 0,
+        x[1], y[1], z[1], 0,
+        x[2], y[2], z[2], 0,
+        -(x[0] * eye[0] + x[1] * eye[1] + x[2] * eye[2]),
+        -(y[0] * eye[0] + y[1] * eye[1] + y[2] * eye[2]),
+        -(z[0] * eye[0] + z[1] * eye[1] + z[2] * eye[2]),
+        1
+      ];
+    }
+
+    function drawMesh(mesh, mode, color, model, matType) {
+      gl.uniformMatrix4fv(uModel, false, new Float32Array(model));
+      gl.uniform3fv(uBaseColor, new Float32Array(color));
+      gl.uniform1f(uMatType, matType);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buf);
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
+      gl.enableVertexAttribArray(aNormal);
+      gl.vertexAttribPointer(aNormal, 3, gl.FLOAT, false, 24, 12);
+      gl.drawArrays(mode, 0, mesh.count);
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.floor(window.innerWidth * dpr);
+      const h = Math.floor(window.innerHeight * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    let yaw = Math.PI;
+    let pitch = -0.08;
+    const camPos = [0, 2.0, 94];
+    let isNight = false;
+    let gateOpen = 0;
+    let gateTextCache = '';
+    let fireworkTextCache = '';
+    let isNearFireworkSpot = false;
+    let fireworkCooldown = 0;
+    const fireworks = [];
+    const pendingBursts = [];
+    const fireworkSpot = [-12, 0, -22];
+
+    const keys = {
+      KeyW: false,
+      KeyA: false,
+      KeyS: false,
+      KeyD: false,
+      ShiftLeft: false,
+      ShiftRight: false
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (keys[e.code] !== undefined) {
+        keys[e.code] = true;
+      }
+      if (e.code === 'KeyN' && !e.repeat) {
+        isNight = !isNight;
+        bootStatus.textContent = isNight ? 'Nattlage aktivt (N for dag).' : 'Daglage aktivt (N for natt).';
+      }
+      if (e.code === 'KeyE' && !e.repeat) {
+        if (isNearFireworkSpot && fireworkCooldown <= 0) {
+          triggerFireworkShow();
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (keys[e.code] !== undefined) {
+        keys[e.code] = false;
+      }
+    });
+
+    canvas.addEventListener('click', () => {
+      if (document.pointerLockElement !== canvas) {
+        canvas.requestPointerLock();
+      }
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+      if (document.pointerLockElement === canvas) {
+        bootStatus.textContent = isNight ? 'FPS aktivt: natt, WASD + mus' : 'FPS aktivt: dag, WASD + mus';
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (document.pointerLockElement !== canvas) return;
+      yaw -= e.movementX * 0.0024;
+      pitch -= e.movementY * 0.0018;
+      pitch = Math.max(-1.2, Math.min(1.2, pitch));
+    });
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.useProgram(program);
+    gl.uniform3f(uLightDir, 0.45, 1.0, 0.28);
+
+    const lampLights = [
+      [-4.8, 4.7, 60],
+      [4.8, 4.7, 30],
+      [-4.8, 4.7, 0],
+      [4.8, 4.7, -30]
+    ];
+
+    const decorativeLampPosts = [
+      [-4.8, 2.4, 60], [4.8, 2.4, 60],
+      [-4.8, 2.4, 30], [4.8, 2.4, 30],
+      [-4.8, 2.4, 0], [4.8, 2.4, 0],
+      [-4.8, 2.4, -30], [4.8, 2.4, -30]
+    ];
+
+    function spawnFireworkBurst(x, y, z, baseColor) {
+      const count = 52;
+      for (let i = 0; i < count; i += 1) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        const speed = 5.4 + Math.random() * 7.4;
+        const vx = Math.cos(theta) * Math.sin(phi) * speed;
+        const vy = Math.abs(Math.cos(phi)) * speed * 0.95 + 2.2;
+        const vz = Math.sin(theta) * Math.sin(phi) * speed;
+        const colorJitter = 0.22;
+        fireworks.push({
+          x, y, z, vx, vy, vz,
+          life: 1.3 + Math.random() * 0.9,
+          maxLife: 1.3 + Math.random() * 0.9,
+          color: [
+            Math.min(1.0, Math.max(0.08, baseColor[0] + (Math.random() - 0.5) * colorJitter)),
+            Math.min(1.0, Math.max(0.08, baseColor[1] + (Math.random() - 0.5) * colorJitter)),
+            Math.min(1.0, Math.max(0.08, baseColor[2] + (Math.random() - 0.5) * colorJitter))
+          ]
+        });
+      }
+    }
+
+    function triggerFireworkShow() {
+      fireworkCooldown = 4.4;
+      bootStatus.textContent = 'Fireworks startade!';
+      pendingBursts.push({ delay: 0.0, x: fireworkSpot[0], y: 9.0, z: fireworkSpot[2], color: [1.0, 0.34, 0.18] });
+      pendingBursts.push({ delay: 0.35, x: fireworkSpot[0] + 2.8, y: 11.0, z: fireworkSpot[2] - 2.2, color: [0.20, 0.72, 1.0] });
+      pendingBursts.push({ delay: 0.75, x: fireworkSpot[0] - 2.4, y: 10.0, z: fireworkSpot[2] + 1.8, color: [0.96, 0.85, 0.22] });
+    }
+
+    let last = performance.now();
+    let wheelAngle = 0;
+    let coasterCartT = 0;
+
+    function frame(now) {
+      resize();
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+
+      const flatForward = [Math.sin(yaw), 0, Math.cos(yaw)];
+      const flatRight = [Math.cos(yaw), 0, -Math.sin(yaw)];
+      const speed = (keys.ShiftLeft || keys.ShiftRight) ? 20 : 10;
+
+      if (keys.KeyW) {
+        camPos[0] += flatForward[0] * speed * dt;
+        camPos[2] += flatForward[2] * speed * dt;
+      }
+      if (keys.KeyS) {
+        camPos[0] -= flatForward[0] * speed * dt;
+        camPos[2] -= flatForward[2] * speed * dt;
+      }
+      if (keys.KeyA) {
+        camPos[0] += flatRight[0] * speed * dt;
+        camPos[2] += flatRight[2] * speed * dt;
+      }
+      if (keys.KeyD) {
+        camPos[0] -= flatRight[0] * speed * dt;
+        camPos[2] -= flatRight[2] * speed * dt;
+      }
+
+      const gateCenterX = 0;
+      const gateCenterZ = 82;
+      const dxGate = camPos[0] - gateCenterX;
+      const dzGate = camPos[2] - gateCenterZ;
+      const gateNear = (dxGate * dxGate + dzGate * dzGate) < (13 * 13);
+      const gateTarget = gateNear ? 1 : 0;
+      gateOpen += (gateTarget - gateOpen) * Math.min(1, dt * 4.5);
+
+      const gateBlocking = gateOpen < 0.52;
+      if (gateBlocking && Math.abs(camPos[0]) < 3.3 && camPos[2] < 84.2 && camPos[2] > 77.2) {
+        camPos[2] = 84.2;
+      }
+
+      camPos[0] = Math.max(-105, Math.min(105, camPos[0]));
+      camPos[2] = Math.max(-105, Math.min(105, camPos[2]));
+      camPos[1] = 2.0;
+
+      const nextGateText = gateOpen > 0.7 ? 'Entresparr: oppen' : 'Entresparr: stangd';
+      if (nextGateText !== gateTextCache) {
+        gateTextCache = nextGateText;
+        gateStatus.textContent = nextGateText;
+      }
+
+      wheelAngle += dt * 0.9;
+      coasterCartT = (coasterCartT + dt * 0.085) % 1.0;
+      fireworkCooldown = Math.max(0, fireworkCooldown - dt);
+
+      const dxFire = camPos[0] - fireworkSpot[0];
+      const dzFire = camPos[2] - fireworkSpot[2];
+      isNearFireworkSpot = (dxFire * dxFire + dzFire * dzFire) < (6.2 * 6.2);
+
+      let nextFireworkText = 'Fireworkplats: ga till vanster sida i parken.';
+      if (isNearFireworkSpot && fireworkCooldown <= 0) {
+        nextFireworkText = 'Tryck E for att starta fireworks.';
+      } else if (isNearFireworkSpot && fireworkCooldown > 0) {
+        nextFireworkText = `Fireworks laddar: ${fireworkCooldown.toFixed(1)}s`;
+      }
+      if (nextFireworkText !== fireworkTextCache) {
+        fireworkTextCache = nextFireworkText;
+        fireworkStatus.textContent = nextFireworkText;
+      }
+
+      for (let i = pendingBursts.length - 1; i >= 0; i -= 1) {
+        pendingBursts[i].delay -= dt;
+        if (pendingBursts[i].delay <= 0) {
+          const b = pendingBursts[i];
+          spawnFireworkBurst(b.x, b.y, b.z, b.color);
+          pendingBursts.splice(i, 1);
+        }
+      }
+
+      for (let i = fireworks.length - 1; i >= 0; i -= 1) {
+        const p = fireworks[i];
+        p.vy -= 8.2 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.z += p.vz * dt;
+        p.life -= dt;
+        if (p.life <= 0 || p.y < 0.2) {
+          fireworks.splice(i, 1);
+        }
+      }
+
+      const forward = [
+        Math.sin(yaw) * Math.cos(pitch),
+        Math.sin(pitch),
+        Math.cos(yaw) * Math.cos(pitch)
+      ];
+      const target = [camPos[0] + forward[0], camPos[1] + forward[1], camPos[2] + forward[2]];
+
+      const proj = m4Perspective(Math.PI / 3, canvas.width / canvas.height, 0.1, 500);
+      const view = m4LookAt(camPos, target, [0, 1, 0]);
+
+      gl.uniformMatrix4fv(uProj, false, new Float32Array(proj));
+      gl.uniformMatrix4fv(uView, false, new Float32Array(view));
+      gl.uniform3fv(uCamPos, new Float32Array(camPos));
+      gl.uniform1f(uNight, isNight ? 1.0 : 0.0);
+
+      gl.uniform3fv(uLampPos0, new Float32Array(lampLights[0]));
+      gl.uniform3fv(uLampPos1, new Float32Array(lampLights[1]));
+      gl.uniform3fv(uLampPos2, new Float32Array(lampLights[2]));
+      gl.uniform3fv(uLampPos3, new Float32Array(lampLights[3]));
+
+      if (isNight) {
+        gl.clearColor(0.03, 0.05, 0.10, 1.0);
+      } else {
+        gl.clearColor(0.78, 0.91, 0.99, 1.0);
+      }
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      drawMesh(geom.ground, gl.TRIANGLES, [0.24, 0.66, 0.29], m4Identity(), 1.0);
+      drawMesh(geom.path, gl.TRIANGLES, [0.84, 0.80, 0.71], m4Translate(0, 0.01, 36), 2.0);
+      drawMesh(geom.center, gl.TRIANGLES, [0.87, 0.84, 0.76], m4Translate(0, 0.02, 0), 2.0);
+
+      drawMesh(geom.post, gl.TRIANGLES, [0.55, 0.37, 0.24], m4Translate(-4.5, 2.75, 82), 3.0);
+      drawMesh(geom.post, gl.TRIANGLES, [0.55, 0.37, 0.24], m4Translate(4.5, 2.75, 82), 3.0);
+      drawMesh(geom.beam, gl.TRIANGLES, [0.68, 0.49, 0.30], m4Translate(0, 5.1, 82), 3.0);
+      drawMesh(geom.sign, gl.TRIANGLES, [0.25, 0.51, 0.27], m4Translate(0, 5.1, 82.85), 3.0);
+
+      drawMesh(geom.barrierBase, gl.TRIANGLES, [0.28, 0.30, 0.34], m4Translate(-2.8, 0.8, 76), 4.0);
+      drawMesh(geom.barrierBase, gl.TRIANGLES, [0.28, 0.30, 0.34], m4Translate(2.8, 0.8, 76), 4.0);
+
+      const barrierArmY = 1.42 + gateOpen * 2.55;
+      drawMesh(geom.barrierArm, gl.TRIANGLES, [0.92, 0.22, 0.22], m4Translate(0.2, barrierArmY, 76), 4.0);
+
+      const barrierLampColor = gateOpen > 0.7 ? [0.20, 0.95, 0.35] : [0.95, 0.20, 0.20];
+      drawMesh(geom.barrierLamp, gl.TRIANGLES, barrierLampColor, m4Translate(-2.8, 1.85, 76), 5.0);
+      drawMesh(geom.barrierLamp, gl.TRIANGLES, barrierLampColor, m4Translate(2.8, 1.85, 76), 5.0);
+
+      drawMesh(geom.fireworkPad, gl.TRIANGLES, [0.23, 0.24, 0.27], m4Translate(fireworkSpot[0], 0.2, fireworkSpot[2]), 4.0);
+      drawMesh(geom.fireworkTube, gl.TRIANGLES, [0.36, 0.38, 0.43], m4Translate(fireworkSpot[0] - 0.8, 0.85, fireworkSpot[2] - 0.6), 4.0);
+      drawMesh(geom.fireworkTube, gl.TRIANGLES, [0.36, 0.38, 0.43], m4Translate(fireworkSpot[0] + 0.8, 0.85, fireworkSpot[2] - 0.6), 4.0);
+      drawMesh(geom.fireworkTube, gl.TRIANGLES, [0.36, 0.38, 0.43], m4Translate(fireworkSpot[0], 0.85, fireworkSpot[2] + 0.65), 4.0);
+
+      drawMesh(geom.coasterRailL, gl.LINES, [0.90, 0.18, 0.16], m4Identity(), 4.0);
+      drawMesh(geom.coasterRailR, gl.LINES, [0.90, 0.18, 0.16], m4Identity(), 4.0);
+
+      for (let i = 0; i < coasterCenterPoints.length; i += 9) {
+        const p = coasterCenterPoints[i];
+        const supportH = Math.max(1.0, p[1] - 0.15);
+        const supportModel = m4Mul(
+          m4Translate(p[0], supportH * 0.5, p[2]),
+          m4Scale(0.36, supportH, 0.36)
+        );
+        drawMesh(geom.coasterSupport, gl.TRIANGLES, [0.40, 0.43, 0.47], supportModel, 4.0);
+
+        const sleeperModel = m4Mul(
+          m4Translate(p[0], p[1] - 0.24, p[2]),
+          m4Scale(2.2, 0.13, 0.26)
+        );
+        drawMesh(geom.coasterSleeper, gl.TRIANGLES, [0.50, 0.33, 0.20], sleeperModel, 3.0);
+      }
+
+      const cartP = coasterPoint(coasterCartT, 0);
+      const cartAhead = coasterPoint((coasterCartT + 0.004) % 1.0, 0);
+      const cartYaw = Math.atan2(cartAhead[0] - cartP[0], cartAhead[2] - cartP[2]);
+      const cartModel = m4Mul(
+        m4Translate(cartP[0], cartP[1] + 0.55, cartP[2]),
+        m4Mul(m4RotateY(cartYaw), m4Scale(1.0, 1.0, 1.0))
+      );
+      drawMesh(geom.coasterCart, gl.TRIANGLES, [0.12, 0.16, 0.70], cartModel, 4.0);
+
+      for (const p of fireworks) {
+        const lifeT = p.life / p.maxLife;
+        const sparkleSize = 0.1 + (1.0 - lifeT) * 0.12;
+        const particleModel = m4Mul(
+          m4Translate(p.x, p.y, p.z),
+          m4Scale(sparkleSize, sparkleSize, sparkleSize)
+        );
+        drawMesh(geom.fireworkParticle, gl.TRIANGLES, p.color, particleModel, 5.0);
+      }
+
+      for (const p of decorativeLampPosts) {
+        drawMesh(geom.lampPost, gl.TRIANGLES, [0.30, 0.33, 0.37], m4Translate(p[0], p[1], p[2]), 4.0);
+        drawMesh(geom.lampHead, gl.TRIANGLES, [1.0, 0.90, 0.62], m4Translate(p[0], p[1] + 2.7, p[2]), 5.0);
+      }
+
+      const ferrisBase = m4Translate(28, 0, -4);
+      drawMesh(geom.support, gl.TRIANGLES, [0.42, 0.49, 0.54], m4Mul(ferrisBase, m4Mul(m4Translate(-3.4, 7, 0), m4RotateZ(0.18))), 4.0);
+      drawMesh(geom.support, gl.TRIANGLES, [0.42, 0.49, 0.54], m4Mul(ferrisBase, m4Mul(m4Translate(3.4, 7, 0), m4RotateZ(-0.18))), 4.0);
+      drawMesh(geom.axle, gl.TRIANGLES, [0.42, 0.49, 0.54], m4Mul(ferrisBase, m4Translate(0, 12.2, 0)), 4.0);
+      drawMesh(geom.wheelBase, gl.TRIANGLES, [0.77, 0.78, 0.80], m4Mul(ferrisBase, m4Translate(0, 0.4, 0)), 4.0);
+
+      const wheelCenter = m4Mul(ferrisBase, m4Translate(0, 12.2, 0));
+      const wheelRot = m4RotateZ(wheelAngle);
+      drawMesh(geom.ring, gl.LINES, [0.96, 0.96, 0.98], m4Mul(wheelCenter, wheelRot), 4.0);
+
+      for (let i = 0; i < 8; i += 1) {
+        const a = (i / 8) * Math.PI * 2;
+        const spokeModel = m4Mul(wheelCenter, m4Mul(wheelRot, m4RotateZ(a)));
+        drawMesh(geom.spoke, gl.LINES, [0.96, 0.96, 0.98], spokeModel, 4.0);
+
+        const ca = wheelAngle + a;
+        const cx = Math.cos(ca) * 6.2;
+        const cy = Math.sin(ca) * 6.2 - 1.25;
+        const cabinModel = m4Mul(wheelCenter, m4Translate(cx, cy, 0));
+        drawMesh(geom.cabin, gl.TRIANGLES, [0.89, 0.36, 0.36], cabinModel, 3.0);
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    bootStatus.textContent = 'WebGL laddad. Klicka i varlden for FPS-kontroll. N for natt.';
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

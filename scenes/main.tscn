@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://ce8r0gjkx6bb4"]
+
+[ext_resource type="PackedScene" path="res://scenes/board_space.tscn" id="1_space"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="Script" uid="uid://b55dv02oniv3c" path="res://scripts/main.gd" id="3_main_script"]
+
+[node name="Main" type="Node2D" unique_id=564143396]
+script = ExtResource("3_main_script")
+
+[node name="Board" type="Node2D" parent="." unique_id=336473585]
+
+[node name="Space1" parent="Board" unique_id=1712362282 instance=ExtResource("1_space")]
+position = Vector2(100, 300)
+
+[node name="Space2" parent="Board" unique_id=1196794640 instance=ExtResource("1_space")]
+position = Vector2(200, 300)
+type = 1
+
+[node name="Space3" parent="Board" unique_id=556179151 instance=ExtResource("1_space")]
+position = Vector2(300, 300)
+
+[node name="Space4" parent="Board" unique_id=1519495973 instance=ExtResource("1_space")]
+position = Vector2(400, 300)
+type = 2
+
+[node name="Space5" parent="Board" unique_id=1810367918 instance=ExtResource("1_space")]
+position = Vector2(500, 300)
+
+[node name="Space6" parent="Board" unique_id=1099144457 instance=ExtResource("1_space")]
+position = Vector2(600, 300)
+type = 1
+
+[node name="Player1" parent="." unique_id=1898054384 node_paths=PackedStringArray("current_space") instance=ExtResource("2_player")]
+position = Vector2(204, 310)
+current_space = NodePath("../Board/Space1")
+player_name = "Mario"
+
+[node name="Player2" parent="." unique_id=250836019 node_paths=PackedStringArray("current_space") instance=ExtResource("2_player")]
+position = Vector2(322, 309)
+current_space = NodePath("../Board/Space1")
+player_name = "Luigi"
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=934648094]
+
+[node name="RollButton" type="Button" parent="UI" unique_id=110707345]
+offset_left = 50.0
+offset_top = 50.0
+offset_right = 150.0
+offset_bottom = 100.0
+text = "Slå tärning"
+
+[node name="DiceLabel" type="Label" parent="UI" unique_id=543729339]
+anchors_preset = -1
+anchor_left = 0.09
+anchor_top = 0.46800002
+anchor_right = 0.09
+anchor_bottom = 0.46800002
+offset_left = -53.680008
+offset_top = -193.264
+offset_right = 246.31999
+offset_bottom = -163.264
+text = "Det är Marios tur!"
+
+[node name="CoinLabel" type="Label" parent="UI" unique_id=2068681163]
+offset_left = 50.0
+offset_top = 150.0
+offset_right = 158.0
+offset_bottom = 199.0
+text = "Mario: 0 coins
+Luigi: 0 coins"

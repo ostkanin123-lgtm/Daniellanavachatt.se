@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3 uid="uid://c5v5v5v5v5v5v"]
+[ext_resource type="PackedScene" uid="uid://djtq85hn0gjdi" path="res://scenes/board_space_3d.tscn" id="1_space"]
+
+[node name="Space_Green" instance=ExtResource("1_space")]
+type = 0

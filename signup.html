@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skapa Konto - Nara</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1f2025;
+      --muted: #5d6370;
+      --primary: #136f63;
+      --accent: #2e86ab;
+      --line: #e8dfd1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: "Outfit", sans-serif;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(46, 134, 171, 0.15), transparent 35%),
+        radial-gradient(circle at 85% 10%, rgba(242, 166, 90, 0.2), transparent 40%),
+        linear-gradient(180deg, #fdf8ee 0%, #f6f1e8 100%);
+      color: var(--ink);
+    }
+    .card {
+      width: min(540px, 100%);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 24px 48px rgba(15, 19, 28, 0.16);
+    }
+    h1 { font-family: "Space Grotesk", sans-serif; margin-bottom: 8px; }
+    p { color: var(--muted); margin-bottom: 14px; }
+    form { display: grid; gap: 10px; }
+    label { font-size: .92rem; font-weight: 600; }
+    input {
+      width: 100%;
+      border: 1px solid #d8dfeb;
+      border-radius: 10px;
+      padding: 11px 12px;
+      font: inherit;
+      background: #fbfdff;
+      color: var(--ink);
+    }
+    input:focus {
+      outline: 2px solid rgba(46, 134, 171, 0.32);
+      border-color: #6ca9c3;
+    }
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 18px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+    }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+    a { color: #285f9a; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    #status { min-height: 20px; color: #0f6a52; font-weight: 600; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Skapa konto</h1>
+    <p>Snabb registrering för att komma igång.</p>
+    <form id="signupForm">
+      <label for="nameInput">Namn</label>
+      <input id="nameInput" name="name" type="text" required placeholder="Ditt namn" />
+      <label for="emailInput">E-post</label>
+      <input id="emailInput" name="email" type="email" required placeholder="du@email.se" />
+      <label for="passwordInput">Lösenord</label>
+      <input id="passwordInput" name="password" type="password" minlength="6" required placeholder="Minst 6 tecken" />
+      <button class="btn" type="submit">Skapa konto</button>
+    </form>
+    <p id="status"></p>
+    <div class="row">
+      <a href="login.html">Har du redan konto? Logga in</a>
+      <a href="pip.html">Till startsidan</a>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('signupForm');
+    const statusText = document.getElementById('status');
+    const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8080' : '';
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const name = String(data.get('name') || '').trim();
+      const email = String(data.get('email') || '').trim();
+      const password = String(data.get('password') || '');
+
+      if (!name || !email || password.length < 6) {
+        statusText.textContent = 'Fyll i alla fält korrekt.';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          statusText.textContent = payload.error || 'Kunde inte skapa konto.';
+          return;
+        }
+
+        localStorage.setItem('naraAuthToken', payload.token);
+        localStorage.setItem('naraAccount', JSON.stringify(payload.user));
+        localStorage.setItem('naraSession', '1');
+        statusText.textContent = `Konto skapat! Välkommen, ${payload.user.name}.`;
+        form.reset();
+
+        setTimeout(() => {
+          window.location.href = `${API_BASE || ''}/pip.html#memberArea`;
+        }, 700);
+      } catch {
+        statusText.textContent = 'Servern svarar inte. Starta servern och försök igen.';
+      }
+    });
+  </script>
+</body>
+</html>

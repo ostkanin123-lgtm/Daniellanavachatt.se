@@ -1,0 +1,53 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/board_space.tscn" id="1_space"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="3_main_script"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("3_main_script")
+
+[node name="Board" type="Node2D" parent="."]
+
+[node name="Space1" parent="Board" instance=ExtResource("1_space")]
+position = Vector2(100, 300)
+
+[node name="Space2" parent="Board" instance=ExtResource("1_space")]
+position = Vector2(200, 300)
+type = 1
+
+[node name="Space3" parent="Board" instance=ExtResource("1_space")]
+position = Vector2(300, 300)
+
+[node name="Space4" parent="Board" instance=ExtResource("1_space")]
+position = Vector2(400, 300)
+type = 2
+
+[node name="Space5" parent="Board" instance=ExtResource("1_space")]
+position = Vector2(500, 300)
+
+[node name="Space6" parent="Board" instance=ExtResource("1_space")]
+position = Vector2(600, 300)
+type = 1
+
+[node name="Player" parent="." node_paths=PackedStringArray("current_space") instance=ExtResource("2_player")]
+current_space = NodePath("../Board/Space1")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="RollButton" type="Button" parent="UI"]
+offset_left = 50.0
+offset_top = 50.0
+offset_right = 150.0
+offset_bottom = 100.0
+text = "Roll Dice"
+
+[node name="DiceLabel" type="Label" parent="UI"]
+offset_left = 50.0
+offset_top = 110.0
+offset_right = 250.0
+offset_bottom = 140.0
+text = "Roll the dice!"
+horizontal_alignment = 1
+

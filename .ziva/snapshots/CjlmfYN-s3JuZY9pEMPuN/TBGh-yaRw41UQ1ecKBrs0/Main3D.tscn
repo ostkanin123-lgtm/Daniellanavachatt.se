@@ -1,0 +1,107 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/main_3d.gd" id="1_1"]
+[ext_resource type="PackedScene" path="res://Player3D.tscn" id="2_1"]
+[ext_resource type="PackedScene" path="res://Dice3D.tscn" id="3_1"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.4, 0.7, 1.0, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Main3D" type="Node3D"]
+script = ExtResource("1_1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 10, 0)
+shadow_enabled = true
+
+[node name="Board" type="Node3D" parent="."]
+
+[node name="Players" type="Node3D" parent="."]
+
+[node name="Mario" parent="Players" instance=ExtResource("2_1")]
+player_name = "Mario"
+player_color = Color(1, 0, 0, 1)
+model_path = "res://nintendo_switch_-_super_mario_party_-_mario.glb"
+
+[node name="Luigi" parent="Players" instance=ExtResource("2_1")]
+player_name = "Luigi"
+player_color = Color(0, 1, 0, 1)
+model_path = "res://luigi_removed_doubles.glb"
+
+[node name="Dice3D" parent="." instance=ExtResource("3_1")]
+visible = false
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 10, 10)
+current = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Control" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RollButton" type="Button" parent="CanvasLayer/Control"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -100.0
+offset_right = 100.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Roll Dice"
+
+[node name="DiceLabel" type="Label" parent="CanvasLayer/Control"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 100.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 48
+text = "Mario's Turn"
+horizontal_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/Control"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -250.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 150.0
+grow_horizontal = 0
+
+[node name="Player1Info" type="Label" parent="CanvasLayer/Control/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_font_sizes/font_size = 24
+text = "Mario: 10 Coins"
+
+[node name="Player2Info" type="Label" parent="CanvasLayer/Control/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 1, 0, 1)
+theme_override_font_sizes/font_size = 24
+text = "Luigi: 10 Coins"
+
+[connection signal="pressed" from="CanvasLayer/Control/RollButton" to="." method="_on_roll_button_pressed"]

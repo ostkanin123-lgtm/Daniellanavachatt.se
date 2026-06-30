@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nara - En ny social plats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f7f3ec;
+      --paper: #fffaf2;
+      --ink: #1f2025;
+      --muted: #5d6370;
+      --primary: #136f63;
+      --primary-2: #f2a65a;
+      --accent: #2e86ab;
+      --card: #ffffff;
+      --line: #e8dfd1;
+      --shadow: 0 20px 40px rgba(24, 28, 35, 0.08);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --bg-layer-1: radial-gradient(circle at 15% 20%, rgba(46, 134, 171, 0.15), transparent 35%);
+      --bg-layer-2: radial-gradient(circle at 85% 10%, rgba(242, 166, 90, 0.2), transparent 40%);
+      --bg-layer-3: linear-gradient(180deg, #fdf8ee 0%, #f6f1e8 100%);
+      --menu-bg: #fffaf2;
+      --menu-border: #e8dfd1;
+      --menu-link: #5d6370;
+      --frame-color: #e8dfd1;
+      --input-border: #d8dfeb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Outfit", sans-serif;
+      background: var(--bg-layer-1), var(--bg-layer-2), var(--bg-layer-3);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body[data-theme="dark"] {
+      --paper: #1b1f28;
+      --card: #202632;
+      --line: #2f3b4f;
+      --ink: #eef3fb;
+      --muted: #aebad0;
+      --bg-layer-1: radial-gradient(circle at 15% 20%, rgba(35, 122, 170, 0.28), transparent 35%);
+      --bg-layer-2: radial-gradient(circle at 85% 10%, rgba(19, 111, 99, 0.32), transparent 40%);
+      --bg-layer-3: linear-gradient(180deg, #11151c 0%, #171d26 100%);
+    }
+
+    body[data-theme="green"] {
+      --paper: #f3fff7;
+      --card: #ffffff;
+      --line: #d5ecdf;
+      --ink: #1b2c24;
+      --muted: #436355;
+      --primary: #1f8f62;
+      --accent: #2f9d79;
+      --bg-layer-1: radial-gradient(circle at 15% 20%, rgba(47, 157, 121, 0.22), transparent 35%);
+      --bg-layer-2: radial-gradient(circle at 85% 10%, rgba(31, 143, 98, 0.2), transparent 40%);
+      --bg-layer-3: linear-gradient(180deg, #f3fff7 0%, #e8f8ee 100%);
+    }
+
+    body[data-theme="yellow"] {
+      --paper: #fffdf3;
+      --card: #fffef8;
+      --line: #efe1ad;
+      --ink: #3a3216;
+      --muted: #6f6234;
+      --primary: #c9950d;
+      --accent: #e3b228;
+      --bg-layer-1: radial-gradient(circle at 15% 20%, rgba(227, 178, 40, 0.25), transparent 35%);
+      --bg-layer-2: radial-gradient(circle at 85% 10%, rgba(201, 149, 13, 0.2), transparent 40%);
+      --bg-layer-3: linear-gradient(180deg, #fffdf3 0%, #fff6d8 100%);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      backdrop-filter: blur(12px);
+      background: var(--menu-bg);
+      border-bottom: 1px solid var(--menu-border);
+    }
+
+    .topbar-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .brand {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 1.3rem;
+      letter-spacing: 0.2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(140deg, var(--primary), var(--accent));
+      box-shadow: 0 0 0 6px rgba(19, 111, 99, 0.14);
+    }
+
+    .nav { display: flex; align-items: center; gap: 16px; font-weight: 500; }
+    .nav a { color: var(--menu-link); text-decoration: none; transition: color .2s ease; }
+    .nav a:hover { color: var(--ink); }
+    .auth-actions { display: flex; align-items: center; gap: 10px; }
+    .member-only { display: none; }
+    body.member-mode .landing-only { display: none !important; }
+    body.member-mode .member-only { display: inline-flex; }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 11px 18px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .btn-link {
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn-primary {
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      box-shadow: 0 10px 22px rgba(19, 111, 99, 0.22);
+    }
+
+    .btn-soft { color: var(--ink); background: #fce7cd; }
+    .btn-ghost {
+      color: var(--ink);
+      background: #eef3f8;
+      box-shadow: inset 0 0 0 1px #d7e2ee;
+    }
+
+    main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 70px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 26px;
+      align-items: stretch;
+      margin-top: 16px;
+    }
+
+    .hero-panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-panel::after {
+      content: "";
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: rgba(46, 134, 171, 0.11);
+      right: -50px;
+      bottom: -50px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .84rem;
+      font-weight: 700;
+      letter-spacing: .7px;
+      text-transform: uppercase;
+      color: var(--primary);
+      background: rgba(19, 111, 99, .1);
+      border-radius: 999px;
+      padding: 7px 12px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.06;
+      margin-bottom: 14px;
+      max-width: 17ch;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 1.04rem;
+      line-height: 1.65;
+      margin-bottom: 22px;
+      max-width: 54ch;
+    }
+
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 11px; margin-bottom: 22px; }
+    .stat-row { display: flex; gap: 22px; flex-wrap: wrap; }
+    .stat strong { display: block; font-size: 1.42rem; font-family: "Space Grotesk", sans-serif; }
+    .stat span { color: var(--muted); font-size: .94rem; }
+
+    .preview { display: grid; grid-template-rows: auto 1fr; gap: 14px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--frame-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .chat-list { display: grid; gap: 10px; }
+
+    .chat {
+      padding: 12px;
+      border-radius: 12px;
+      background: #f7f8fb;
+      border: 1px solid #e7ebf0;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: .95rem;
+    }
+
+    .chat b { font-weight: 600; }
+    .chat small { color: var(--muted); }
+
+    .grid { margin-top: 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .feature h3 { font-family: "Space Grotesk", sans-serif; margin-bottom: 8px; font-size: 1.1rem; }
+    .feature p { color: var(--muted); line-height: 1.6; font-size: .96rem; }
+
+    .ticker {
+      margin-top: 34px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .7);
+      overflow: hidden;
+    }
+
+    .ticker-track {
+      display: flex;
+      gap: 34px;
+      white-space: nowrap;
+      padding: 12px 0;
+      animation: ticker 24s linear infinite;
+      font-weight: 600;
+      color: #31414f;
+    }
+
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    .section { margin-top: 42px; }
+    .section h2 { font-family: "Space Grotesk", sans-serif; font-size: clamp(1.45rem, 2.6vw, 2.1rem); margin-bottom: 12px; }
+    .section p { color: var(--muted); max-width: 66ch; line-height: 1.65; }
+
+    .timeline { margin-top: 20px; display: grid; gap: 12px; }
+
+    .step {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .step-index {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: .86rem;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(130deg, var(--primary), var(--accent));
+      margin-top: 2px;
+    }
+
+    .quote {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px dashed #dfd3c0;
+      background: #fffaf4;
+      font-weight: 500;
+      line-height: 1.55;
+      min-height: 95px;
+      display: grid;
+      align-content: center;
+    }
+
+    footer {
+      margin-top: 46px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      color: #66707c;
+      font-size: .92rem;
+    }
+
+    .signup-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      z-index: 80;
+      background: rgba(19, 22, 29, 0.45);
+      padding: 16px;
+    }
+
+    .signup-modal.open {
+      display: grid;
+    }
+
+    .login-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      z-index: 81;
+      background: rgba(19, 22, 29, 0.45);
+      padding: 16px;
+    }
+
+    .login-modal.open {
+      display: grid;
+    }
+
+    .signup-panel {
+      width: min(520px, 100%);
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid var(--frame-color);
+      box-shadow: 0 24px 48px rgba(15, 19, 28, 0.22);
+      padding: 22px;
+    }
+
+    .signup-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .signup-head h3 {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.3rem;
+    }
+
+    .close-btn {
+      border: 0;
+      background: #f3efe8;
+      color: #38414a;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .signup-form {
+      display: grid;
+      gap: 10px;
+    }
+
+    .signup-form label {
+      font-size: .9rem;
+      font-weight: 600;
+    }
+
+    .signup-form input {
+      width: 100%;
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      font: inherit;
+      color: var(--ink);
+      background: #fbfdff;
+    }
+
+    .signup-form input:focus {
+      outline: 2px solid rgba(46, 134, 171, 0.32);
+      border-color: #6ca9c3;
+    }
+
+    .form-note {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-top: 4px;
+    }
+
+    .success-msg {
+      margin-top: 8px;
+      color: #0f6a52;
+      font-weight: 600;
+      font-size: .92rem;
+      min-height: 20px;
+    }
+
+    .member-area {
+      margin-top: 34px;
+      display: none;
+    }
+
+    .member-area.active {
+      display: block;
+    }
+
+    .member-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .member-tab {
+      border: 1px solid var(--frame-color);
+      border-radius: 999px;
+      background: #f6f9ff;
+      color: var(--ink);
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .member-tab.active {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .member-panel {
+      display: none;
+    }
+
+    .member-panel.active {
+      display: block;
+    }
+
+    .member-card h3 {
+      font-family: "Space Grotesk", sans-serif;
+      margin-bottom: 6px;
+      font-size: 1.2rem;
+    }
+
+    .member-card p {
+      color: var(--muted);
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    .profile-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .profile-grid label {
+      font-size: .9rem;
+      font-weight: 600;
+    }
+
+    .profile-grid input,
+    .profile-grid textarea {
+      width: 100%;
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      background: #fbfdff;
+      color: var(--ink);
+    }
+
+    .profile-grid textarea {
+      min-height: 96px;
+      resize: vertical;
+    }
+
+    .profile-grid input:focus,
+    .profile-grid textarea:focus {
+      outline: 2px solid rgba(46, 134, 171, 0.32);
+      border-color: #6ca9c3;
+    }
+
+    .avatar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .avatar-preview {
+      width: 72px;
+      height: 72px;
+      border-radius: 999px;
+      border: 2px solid #d6deea;
+      object-fit: cover;
+      background: #eef3f8;
+    }
+
+    .profile-status {
+      min-height: 20px;
+      color: #0f6a52;
+      font-size: .9rem;
+      font-weight: 600;
+    }
+
+    .mail-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .mail-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mail-alert-dot {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: .75rem;
+      font-weight: 700;
+      color: #fff;
+      background: #d92d20;
+      border-radius: 999px;
+      padding: 3px 9px;
+      letter-spacing: .2px;
+    }
+
+    .mail-alert-dot.active {
+      display: inline-flex;
+      animation: mailboxBlink 1s ease-in-out infinite;
+    }
+
+    .member-card.mail-alert {
+      border-color: #e76d6d;
+      box-shadow: 0 0 0 2px rgba(217, 45, 32, 0.15), var(--shadow);
+    }
+
+    @keyframes mailboxBlink {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .35; transform: scale(.96); }
+    }
+
+    .mail-item {
+      border: 1px solid #e3e8f1;
+      background: #f9fbff;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .mail-item-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: .9rem;
+      margin-bottom: 6px;
+      color: #435364;
+    }
+
+    .mail-item h4 {
+      font-size: .98rem;
+      margin-bottom: 4px;
+    }
+
+    .mail-item p {
+      margin: 0;
+      color: #4f5b67;
+      font-size: .94rem;
+      line-height: 1.45;
+    }
+
+    .member-form {
+      display: grid;
+      gap: 10px;
+    }
+
+    .member-form input,
+    .member-form textarea {
+      width: 100%;
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      background: #fbfdff;
+      color: var(--ink);
+    }
+
+    .member-form input:focus,
+    .member-form textarea:focus {
+      outline: 2px solid rgba(46, 134, 171, 0.32);
+      border-color: #6ca9c3;
+    }
+
+    .chat-messages {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+      max-height: 190px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .chat-bubble {
+      border-radius: 11px;
+      padding: 9px 11px;
+      background: #eff4fb;
+      border: 1px solid #dbe7f4;
+      font-size: .93rem;
+    }
+
+    .chat-bubble.me {
+      background: #dff5ef;
+      border-color: #bbe8da;
+    }
+
+    .search-results {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .search-item {
+      border: 1px solid #e3e8f1;
+      border-radius: 11px;
+      padding: 10px;
+      background: #f9fbff;
+    }
+
+    .search-item b {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .online-meta {
+      color: var(--muted);
+      font-size: .92rem;
+      margin-bottom: 10px;
+    }
+
+    .online-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .online-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid var(--frame-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #f9fbff;
+    }
+
+    .online-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .online-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #2fc67a;
+      box-shadow: 0 0 0 4px rgba(47, 198, 122, 0.18);
+      flex: 0 0 auto;
+    }
+
+    .online-name {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .online-you {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-left: 8px;
+    }
+
+    .dm-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 12px;
+    }
+
+    .dm-users {
+      display: grid;
+      gap: 6px;
+      max-height: 320px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .dm-user-btn {
+      text-align: left;
+      border: 1px solid var(--frame-color);
+      background: #f8fbff;
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .dm-user-btn.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(19, 111, 99, 0.18);
+      background: #eef8f5;
+    }
+
+    .dm-thread {
+      border: 1px solid var(--frame-color);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fbfdff;
+      display: grid;
+      gap: 8px;
+      min-height: 220px;
+    }
+
+    .dm-messages {
+      max-height: 240px;
+      overflow: auto;
+      display: grid;
+      gap: 7px;
+      padding-right: 2px;
+    }
+
+    .dm-bubble {
+      border-radius: 11px;
+      padding: 8px 10px;
+      background: #edf3fb;
+      border: 1px solid #dbe7f4;
+      font-size: .92rem;
+    }
+
+    .dm-bubble.me {
+      background: #dff5ef;
+      border-color: #bbe8da;
+    }
+
+    @media (max-width: 760px) {
+      .dm-layout { grid-template-columns: 1fr; }
+      .dm-users { max-height: 170px; }
+    }
+
+    .theme-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .theme-btn {
+      border: 1px solid #d7deea;
+      background: #f6f9ff;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .theme-btn.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(19, 111, 99, 0.2);
+    }
+
+    .theme-custom {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .theme-custom-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .theme-color-input {
+      width: 50px;
+      height: 38px;
+      border: 1px solid #d8dfeb;
+      border-radius: 10px;
+      padding: 2px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .theme-hex-input {
+      width: 130px;
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font: inherit;
+      background: #fbfdff;
+      color: var(--ink);
+    }
+
+    .theme-hex-input:focus {
+      outline: 2px solid rgba(46, 134, 171, 0.32);
+      border-color: #6ca9c3;
+    }
+
+    .design-grid {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .design-field {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border: 1px solid var(--frame-color);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #f8fbff;
+      color: var(--ink);
+      font-size: .9rem;
+    }
+
+    .design-field input[type="color"] {
+      width: 34px;
+      height: 28px;
+      border: 1px solid var(--input-border);
+      border-radius: 7px;
+      padding: 1px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .design-actions {
+      margin-top: 9px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .design-actions .btn {
+      padding: 9px 12px;
+      font-size: .9rem;
+    }
+
+    .fade-up { opacity: 0; transform: translateY(18px); animation: fadeUp .7s ease forwards; }
+    .delay-1 { animation-delay: .15s; }
+    .delay-2 { animation-delay: .3s; }
+    .delay-3 { animation-delay: .45s; }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      .topbar-inner { flex-wrap: wrap; }
+      .nav { order: 3; width: 100%; justify-content: space-between; gap: 10px; }
+      .auth-actions { width: 100%; }
+      .auth-actions .btn-link { flex: 1; text-align: center; }
+      .auth-actions .member-only { flex: 1; justify-content: center; }
+      .hero-panel { padding: 24px; }
+      .grid { grid-template-columns: 1fr; }
+      .stat-row { gap: 12px; }
+      .hero-actions .btn { width: 100%; }
+      .design-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="dot"></span> Nara</div>
+      <nav class="nav landing-only">
+        <a href="#funktioner">Funktioner</a>
+        <a href="#hur">Hur det funkar</a>
+        <a href="#community">Community</a>
+      </nav>
+      <div class="auth-actions">
+        <a class="btn btn-ghost btn-link landing-only" href="login.html">Inloggning</a>
+        <a class="btn btn-primary btn-link landing-only" href="signup.html">Skapa konto</a>
+        <button class="btn btn-ghost member-only" id="logoutBtn" type="button">Logga ut</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero landing-only">
+      <article class="hero-panel fade-up">
+        <div class="eyebrow">Nästa generations sociala plats</div>
+        <h1>Mer äkta vänner. Mindre brus.</h1>
+        <p class="lead">Nara är byggd för riktiga relationer: mindre jagande efter likes och mer plats för samtal, intressen och aktiviteter man faktiskt vill dela med andra.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-link" href="signup.html">Bli medlem gratis</a>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><strong>12 400+</strong><span>Aktiva grupper</span></div>
+          <div class="stat"><strong>4.9/5</strong><span>Medlemsbetyg</span></div>
+          <div class="stat"><strong>0 reklamspam</strong><span>Ren upplevelse</span></div>
+        </div>
+      </article>
+
+      <aside class="preview fade-up delay-1">
+        <div class="card">
+          <h3 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 8px;">Kvällsplaner i närheten</h3>
+          <p style="color: var(--muted); line-height: 1.5;">Hitta folk med samma musiksmak, spelintresse eller träningsmål pa ett par klick.</p>
+        </div>
+        <div class="card">
+          <div class="chat-list">
+            <div class="chat"><b>Filmkvall Stockholm</b><small>31 nya inlägg</small></div>
+            <div class="chat"><b>Retrospel & LAN</b><small>9 nya inlägg</small></div>
+            <div class="chat"><b>Löpning 5 km</b><small>14 deltagare nu</small></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section id="funktioner" class="grid landing-only">
+      <article class="card feature fade-up delay-1">
+        <h3>Personliga rum</h3>
+        <p>Skapa privata eller öppna rum för dina närmaste, projektgrupper eller lokala communities.</p>
+      </article>
+      <article class="card feature fade-up delay-2">
+        <h3>Smart matchning</h3>
+        <p>Vi kopplar dig med personer efter intressen, personlighet och aktivitet – inte bara plats.</p>
+      </article>
+      <article class="card feature fade-up delay-3">
+        <h3>Tryggt från start</h3>
+        <p>Tydliga verktyg for integritet, blockering och moderering så du alltid har kontroll.</p>
+      </article>
+    </section>
+
+    <div class="ticker fade-up delay-2 landing-only" aria-hidden="true">
+      <div class="ticker-track">
+        <span>Skapa events</span><span>Lokala grupper</span><span>Verifierade profiler</span><span>Intressematchning</span><span>Trygg chatt</span><span>Skapa events</span><span>Lokala grupper</span><span>Verifierade profiler</span><span>Intressematchning</span><span>Trygg chatt</span>
+      </div>
+    </div>
+
+    <section id="hur" class="section fade-up delay-1 landing-only">
+      <h2>Hur det funkar</h2>
+      <p>Flödet är enkelt: skapa profil, välj intressen och hoppa in i grupper som känns rätt. Inga krångliga steg och inga konstiga hinder.</p>
+      <div class="timeline">
+        <article class="step">
+          <div class="step-index">1</div>
+          <div>
+            <h3>Bygg din profil</h3>
+            <p>Lyft fram vad du gillar, vad du letar efter och hur du vill umgås online.</p>
+          </div>
+        </article>
+        <article class="step">
+          <div class="step-index">2</div>
+          <div>
+            <h3>Hitta rätt community</h3>
+            <p>Joina grupper och events som matchar dina intressen och din vibe.</p>
+          </div>
+        </article>
+        <article class="step">
+          <div class="step-index">3</div>
+          <div>
+            <h3>Starta något eget</h3>
+            <p>Skapa egna trådar, bjud in folk och bygg relationer som faktiskt håller.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="community" class="section fade-up delay-2 landing-only">
+      <h2>Vad medlemmar säger</h2>
+      <p>En social plattform blir bara bra om den känns levande. Här är några snabba röster från communityn.</p>
+      <div class="quote" id="quoteBox">"Jag hittade en bokklubb och två nya vänner första veckan." – Lina, 23</div>
+    </section>
+
+    <section class="member-area" id="memberArea">
+      <div class="member-tabs">
+        <button class="member-tab active" type="button" data-member-tab="profile">Profil</button>
+        <button class="member-tab" type="button" data-member-tab="mail">Brevlåda</button>
+        <button class="member-tab" type="button" data-member-tab="chat">Chatt</button>
+        <button class="member-tab" type="button" data-member-tab="pm">PM</button>
+        <button class="member-tab" type="button" data-member-tab="online">Online</button>
+        <button class="member-tab" type="button" data-member-tab="search">Sök profil</button>
+        <button class="member-tab" type="button" data-member-tab="design">Design</button>
+      </div>
+
+      <article class="card member-card member-panel active" data-member-panel="profile">
+        <h3>Min profil</h3>
+        <p id="memberGreeting">Fyll i din profil så andra lär känna dig bättre.</p>
+        <div class="avatar-row">
+          <img class="avatar-preview" id="avatarPreview" alt="Profilbild" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='36' fill='%23e7edf6'/%3E%3Ccircle cx='36' cy='29' r='13' fill='%23b6c4d7'/%3E%3Crect x='14' y='47' width='44' height='19' rx='9.5' fill='%23b6c4d7'/%3E%3C/svg%3E" />
+          <input id="profileImageInput" type="file" accept="image/*" />
+        </div>
+        <form class="profile-grid" id="profileForm">
+          <label for="profileAge">Ålder</label>
+          <input id="profileAge" name="age" type="number" min="13" max="120" placeholder="Exempel: 22" required />
+          <label for="profileBio">Om mig</label>
+          <textarea id="profileBio" name="bio" placeholder="Skriv kort om dig själv..." required></textarea>
+          <button class="btn btn-primary" type="submit">Spara profil</button>
+        </form>
+        <p class="profile-status" id="profileStatus"></p>
+      </article>
+
+      <article class="card member-card member-panel" id="mailCard" data-member-panel="mail">
+        <h3 class="mail-title">Brevlåda <span class="mail-alert-dot" id="mailAlertDot">Nytt</span></h3>
+        <p>Dina senaste meddelanden visas här.</p>
+        <div class="mail-list" id="mailList"></div>
+      </article>
+
+      <article class="card member-card member-panel" data-member-panel="chat">
+        <h3>Chatt</h3>
+        <p>Snabb chatt direkt i ditt konto.</p>
+        <div class="chat-messages" id="chatMessages"></div>
+        <form class="member-form" id="chatForm">
+          <input id="chatInput" type="text" placeholder="Skriv ett meddelande..." required />
+          <button class="btn btn-primary" type="submit">Skicka</button>
+        </form>
+      </article>
+
+      <article class="card member-card member-panel" data-member-panel="pm">
+        <h3>Privata Meddelanden</h3>
+        <div class="dm-layout">
+          <div>
+            <p class="online-meta">Välj en person att chatta med.</p>
+            <div class="dm-users" id="dmUsers"></div>
+          </div>
+          <div class="dm-thread">
+            <p class="online-meta" id="dmTitle">Ingen mottagare vald.</p>
+            <div class="dm-messages" id="dmMessages"></div>
+            <form class="member-form" id="dmForm">
+              <input id="dmInput" type="text" placeholder="Skriv privat meddelande..." required />
+              <button class="btn btn-primary" type="submit">Skicka PM</button>
+            </form>
+          </div>
+        </div>
+      </article>
+
+      <article class="card member-card member-panel" data-member-panel="online">
+        <h3>Online</h3>
+        <p class="online-meta" id="onlineMeta">Uppdaterar...</p>
+        <div class="online-list" id="onlineList"></div>
+      </article>
+
+      <article class="card member-card member-panel" data-member-panel="search">
+        <h3>Sök profil</h3>
+        <p>Sök på namn eller intresse.</p>
+        <form class="member-form" id="searchForm">
+          <input id="searchInput" type="text" placeholder="Exempel: Lina eller foto" />
+          <button class="btn btn-primary" type="submit">Sök</button>
+        </form>
+        <div class="search-results" id="searchResults"></div>
+      </article>
+
+      <article class="card member-card member-panel" data-member-panel="design">
+        <h3>Välj bakgrund</h3>
+        <p>Byt tema på sidan som du vill.</p>
+        <div class="theme-controls">
+          <button class="theme-btn" type="button" data-theme-value="default">Standard</button>
+          <button class="theme-btn" type="button" data-theme-value="dark">Mörk</button>
+          <button class="theme-btn" type="button" data-theme-value="green">Grön</button>
+          <button class="theme-btn" type="button" data-theme-value="yellow">Gul</button>
+        </div>
+        <div class="theme-custom">
+          <div class="theme-custom-row">
+            <input class="theme-color-input" id="customThemePicker" type="color" value="#89c2ff" />
+            <input class="theme-hex-input" id="customThemeHex" type="text" value="#89C2FF" maxlength="7" placeholder="#RRGGBB" />
+            <button class="btn btn-primary" type="button" id="applyCustomThemeBtn">Använd färgkod</button>
+          </div>
+          <p>Skriv valfri färgkod, till exempel `#3FAE5A`.</p>
+        </div>
+
+        <div class="design-grid">
+          <label class="design-field">Meny bakgrund <input type="color" data-ui-color="menuBg" value="#FFFAF2" /></label>
+          <label class="design-field">Meny text <input type="color" data-ui-color="menuText" value="#5D6370" /></label>
+          <label class="design-field">Ramar <input type="color" data-ui-color="frame" value="#E8DFD1" /></label>
+          <label class="design-field">Kort bakgrund <input type="color" data-ui-color="card" value="#FFFFFF" /></label>
+          <label class="design-field">Knapp primär <input type="color" data-ui-color="primary" value="#136F63" /></label>
+          <label class="design-field">Knapp sekundär <input type="color" data-ui-color="accent" value="#2E86AB" /></label>
+          <label class="design-field">Text färg <input type="color" data-ui-color="text" value="#1F2025" /></label>
+          <label class="design-field">Input ram <input type="color" data-ui-color="inputBorder" value="#D8DFEB" /></label>
+        </div>
+        <div class="design-actions">
+          <button class="btn btn-primary" type="button" id="saveDesignColorsBtn">Spara design</button>
+          <button class="btn btn-ghost" type="button" id="resetDesignColorsBtn">Nollställ design</button>
+        </div>
+      </article>
+    </section>
+
+    <footer class="landing-only">
+      <span>© 2026 Nara. Designad med fokus på relationer.</span>
+      <span>Byggd for mobil och desktop.</span>
+    </footer>
+  </main>
+
+  <div class="signup-modal" id="signupModal" aria-hidden="true">
+    <div class="signup-panel">
+      <div class="signup-head">
+        <h3>Skapa konto snabbt</h3>
+        <button class="close-btn" type="button" id="closeSignup" aria-label="Stäng">×</button>
+      </div>
+      <form class="signup-form" id="signupForm">
+        <label for="nameInput">Namn</label>
+        <input id="nameInput" name="name" type="text" placeholder="Ditt namn" required />
+        <label for="emailInput">E-post</label>
+        <input id="emailInput" name="email" type="email" placeholder="du@email.se" required />
+        <label for="passwordInput">Lösenord</label>
+        <input id="passwordInput" name="password" type="password" minlength="6" placeholder="Minst 6 tecken" required />
+        <button class="btn btn-primary" type="submit">Skapa konto</button>
+      </form>
+      <p class="form-note">Klart på några sekunder.</p>
+      <p class="success-msg" id="signupSuccess"></p>
+    </div>
+  </div>
+
+  <div class="login-modal" id="loginModal" aria-hidden="true">
+    <div class="signup-panel">
+      <div class="signup-head">
+        <h3>Logga in</h3>
+        <button class="close-btn" type="button" id="closeLogin" aria-label="Stäng">×</button>
+      </div>
+      <form class="signup-form" id="loginForm">
+        <label for="loginEmailInput">E-post</label>
+        <input id="loginEmailInput" name="email" type="email" placeholder="du@email.se" required />
+        <label for="loginPasswordInput">Lösenord</label>
+        <input id="loginPasswordInput" name="password" type="password" minlength="6" placeholder="Ditt lösenord" required />
+        <button class="btn btn-primary" type="submit">Logga in</button>
+      </form>
+      <p class="success-msg" id="loginStatus"></p>
+    </div>
+  </div>
+
+  <script>
+    const quotes = [
+      '"Jag hittade en bokklubb och två nya vänner första veckan." – Lina, 23',
+      '"Det känns som gamla internet fast modernare och mycket tryggare." – Amir, 27',
+      '"Äntligen en social sida där man slipper brus och kan vara sig själv." – Felicia, 21',
+      '"Vi startade ett lokalt fotonätverk på en kväll. Superenkelt!" – Nils, 30'
+    ];
+
+    let i = 0;
+    const quoteBox = document.getElementById('quoteBox');
+    const signupModal = document.getElementById('signupModal');
+    const loginModal = document.getElementById('loginModal');
+    const signupForm = document.getElementById('signupForm');
+    const loginForm = document.getElementById('loginForm');
+    const closeSignup = document.getElementById('closeSignup');
+    const closeLogin = document.getElementById('closeLogin');
+    const signupSuccess = document.getElementById('signupSuccess');
+    const loginStatus = document.getElementById('loginStatus');
+    const openButtons = document.querySelectorAll('[data-open-signup]');
+    const loginButtons = document.querySelectorAll('[data-open-login]');
+    const memberArea = document.getElementById('memberArea');
+    const memberTabs = document.querySelectorAll('[data-member-tab]');
+    const memberPanels = document.querySelectorAll('[data-member-panel]');
+    const memberGreeting = document.getElementById('memberGreeting');
+    const profileForm = document.getElementById('profileForm');
+    const profileAge = document.getElementById('profileAge');
+    const profileBio = document.getElementById('profileBio');
+    const profileImageInput = document.getElementById('profileImageInput');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const profileStatus = document.getElementById('profileStatus');
+    const mailList = document.getElementById('mailList');
+    const mailCard = document.getElementById('mailCard');
+    const mailAlertDot = document.getElementById('mailAlertDot');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const dmUsers = document.getElementById('dmUsers');
+    const dmTitle = document.getElementById('dmTitle');
+    const dmMessages = document.getElementById('dmMessages');
+    const dmForm = document.getElementById('dmForm');
+    const dmInput = document.getElementById('dmInput');
+    const searchForm = document.getElementById('searchForm');
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const onlineList = document.getElementById('onlineList');
+    const onlineMeta = document.getElementById('onlineMeta');
+    const themeButtons = document.querySelectorAll('[data-theme-value]');
+    const customThemePicker = document.getElementById('customThemePicker');
+    const customThemeHex = document.getElementById('customThemeHex');
+    const applyCustomThemeBtn = document.getElementById('applyCustomThemeBtn');
+    const uiColorInputs = document.querySelectorAll('[data-ui-color]');
+    const saveDesignColorsBtn = document.getElementById('saveDesignColorsBtn');
+    const resetDesignColorsBtn = document.getElementById('resetDesignColorsBtn');
+    const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8080' : '';
+    let authToken = localStorage.getItem('naraAuthToken') || '';
+    let activeUser = null;
+    let latestChatId = 0;
+    let latestDmId = 0;
+    let dmUsersCache = [];
+    let selectedDmUserId = 0;
+    let lastInboxCount = 0;
+
+    setInterval(() => {
+      i = (i + 1) % quotes.length;
+      quoteBox.style.opacity = 0;
+      quoteBox.style.transform = 'translateY(6px)';
+
+      setTimeout(() => {
+        quoteBox.textContent = quotes[i];
+        quoteBox.style.opacity = 1;
+        quoteBox.style.transform = 'translateY(0)';
+      }, 230);
+    }, 3500);
+
+    quoteBox.style.transition = 'opacity .25s ease, transform .25s ease';
+
+    function openSignup() {
+      signupModal.classList.add('open');
+      signupModal.setAttribute('aria-hidden', 'false');
+      signupSuccess.textContent = '';
+      setTimeout(() => document.getElementById('nameInput').focus(), 20);
+    }
+
+    function closeSignupModal() {
+      signupModal.classList.remove('open');
+      signupModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openLogin() {
+      loginModal.classList.add('open');
+      loginModal.setAttribute('aria-hidden', 'false');
+      loginStatus.textContent = '';
+      setTimeout(() => document.getElementById('loginEmailInput').focus(), 20);
+    }
+
+    function closeLoginModal() {
+      loginModal.classList.remove('open');
+      loginModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function readJsonStorage(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function saveJsonStorage(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    async function apiGet(path) {
+      const response = await fetch(`${API_BASE}${path}`);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'API-fel');
+      return payload;
+    }
+
+    async function apiPost(path, body) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'API-fel');
+      return payload;
+    }
+
+    function normalizeHexColor(value) {
+      const raw = String(value || '').trim();
+      const withHash = raw.startsWith('#') ? raw : `#${raw}`;
+      return /^#[0-9a-fA-F]{6}$/.test(withHash) ? withHash.toUpperCase() : null;
+    }
+
+    function hexToRgb(hex) {
+      const clean = hex.replace('#', '');
+      return {
+        r: parseInt(clean.slice(0, 2), 16),
+        g: parseInt(clean.slice(2, 4), 16),
+        b: parseInt(clean.slice(4, 6), 16)
+      };
+    }
+
+    function mixRgb(base, target, amount) {
+      return {
+        r: Math.round(base.r + (target.r - base.r) * amount),
+        g: Math.round(base.g + (target.g - base.g) * amount),
+        b: Math.round(base.b + (target.b - base.b) * amount)
+      };
+    }
+
+    function rgbString(rgb) {
+      return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    }
+
+    function clearCustomThemeStyles() {
+      [
+        '--bg-layer-1',
+        '--bg-layer-2',
+        '--bg-layer-3',
+        '--paper',
+        '--card',
+        '--line',
+        '--primary',
+        '--accent',
+        '--ink',
+        '--muted'
+      ].forEach((cssVar) => document.body.style.removeProperty(cssVar));
+    }
+
+    const defaultUiColors = {
+      menuBg: '#FFFAF2',
+      menuText: '#5D6370',
+      frame: '#E8DFD1',
+      card: '#FFFFFF',
+      primary: '#136F63',
+      accent: '#2E86AB',
+      text: '#1F2025',
+      inputBorder: '#D8DFEB'
+    };
+
+    function collectUiColorsFromInputs() {
+      const colors = {};
+      uiColorInputs.forEach((input) => {
+        const key = input.getAttribute('data-ui-color');
+        const value = normalizeHexColor(input.value);
+        if (key && value) colors[key] = value;
+      });
+      return colors;
+    }
+
+    function applyUiColors(colors = {}) {
+      const merged = { ...defaultUiColors, ...colors };
+      document.body.style.setProperty('--menu-bg', merged.menuBg);
+      document.body.style.setProperty('--menu-border', merged.frame);
+      document.body.style.setProperty('--menu-link', merged.menuText);
+      document.body.style.setProperty('--frame-color', merged.frame);
+      document.body.style.setProperty('--line', merged.frame);
+      document.body.style.setProperty('--card', merged.card);
+      document.body.style.setProperty('--primary', merged.primary);
+      document.body.style.setProperty('--accent', merged.accent);
+      document.body.style.setProperty('--ink', merged.text);
+      document.body.style.setProperty('--input-border', merged.inputBorder);
+      document.body.style.setProperty('--muted', mixHexWithBlackWhite(merged.text, 0.28));
+
+      uiColorInputs.forEach((input) => {
+        const key = input.getAttribute('data-ui-color');
+        if (key && merged[key]) input.value = merged[key];
+      });
+    }
+
+    function mixHexWithBlackWhite(hex, toWhiteAmount) {
+      const base = hexToRgb(hex);
+      const target = { r: 255, g: 255, b: 255 };
+      const mixed = mixRgb(base, target, toWhiteAmount);
+      return `rgb(${mixed.r}, ${mixed.g}, ${mixed.b})`;
+    }
+
+    function saveUiColors(colors) {
+      localStorage.setItem('naraUiColors', JSON.stringify(colors));
+    }
+
+    function loadUiColors() {
+      return readJsonStorage('naraUiColors', null);
+    }
+
+    function cssColorToHex(color) {
+      const raw = String(color || '').trim();
+      if (raw.startsWith('#')) return normalizeHexColor(raw) || '#000000';
+      const match = raw.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+      if (!match) return '#000000';
+      const r = Number(match[1]).toString(16).padStart(2, '0');
+      const g = Number(match[2]).toString(16).padStart(2, '0');
+      const b = Number(match[3]).toString(16).padStart(2, '0');
+      return `#${r}${g}${b}`.toUpperCase();
+    }
+
+    function getThemeColorSnapshot() {
+      const css = getComputedStyle(document.body);
+      return {
+        menuBg: cssColorToHex(css.getPropertyValue('--menu-bg')),
+        menuText: cssColorToHex(css.getPropertyValue('--menu-link')),
+        frame: cssColorToHex(css.getPropertyValue('--frame-color')),
+        card: cssColorToHex(css.getPropertyValue('--card')),
+        primary: cssColorToHex(css.getPropertyValue('--primary')),
+        accent: cssColorToHex(css.getPropertyValue('--accent')),
+        text: cssColorToHex(css.getPropertyValue('--ink')),
+        inputBorder: cssColorToHex(css.getPropertyValue('--input-border'))
+      };
+    }
+
+    function syncUiInputs(colors) {
+      uiColorInputs.forEach((input) => {
+        const key = input.getAttribute('data-ui-color');
+        if (key && colors[key]) input.value = colors[key];
+      });
+    }
+
+    function resetUiColors() {
+      localStorage.removeItem('naraUiColors');
+      const theme = localStorage.getItem('naraTheme') || 'default';
+      applyTheme(theme);
+      syncUiInputs(getThemeColorSnapshot());
+    }
+
+    function applyCustomThemeColor(hex, persist = true) {
+      const validHex = normalizeHexColor(hex);
+      if (!validHex) return false;
+
+      const base = hexToRgb(validHex);
+      const white = { r: 255, g: 255, b: 255 };
+      const black = { r: 0, g: 0, b: 0 };
+      const top = mixRgb(base, white, 0.78);
+      const bottom = mixRgb(base, white, 0.62);
+      const paper = mixRgb(base, white, 0.9);
+      const card = mixRgb(base, white, 0.95);
+      const line = mixRgb(base, white, 0.72);
+      const primary = mixRgb(base, black, 0.18);
+      const accent = mixRgb(base, black, 0.07);
+      const luminance = (0.299 * base.r) + (0.587 * base.g) + (0.114 * base.b);
+      const ink = luminance > 145 ? '#1F2025' : '#F2F6FF';
+      const muted = luminance > 145 ? '#4F5967' : '#C5D0E2';
+
+      document.body.setAttribute('data-theme', 'custom');
+      document.body.style.setProperty('--bg-layer-1', `radial-gradient(circle at 15% 20%, rgba(${base.r}, ${base.g}, ${base.b}, 0.28), transparent 35%)`);
+      document.body.style.setProperty('--bg-layer-2', `radial-gradient(circle at 85% 10%, rgba(${base.r}, ${base.g}, ${base.b}, 0.18), transparent 40%)`);
+      document.body.style.setProperty('--bg-layer-3', `linear-gradient(180deg, ${rgbString(top)} 0%, ${rgbString(bottom)} 100%)`);
+      document.body.style.setProperty('--paper', rgbString(paper));
+      document.body.style.setProperty('--card', rgbString(card));
+      document.body.style.setProperty('--line', rgbString(line));
+      document.body.style.setProperty('--primary', rgbString(primary));
+      document.body.style.setProperty('--accent', rgbString(accent));
+      document.body.style.setProperty('--ink', ink);
+      document.body.style.setProperty('--muted', muted);
+
+      customThemePicker.value = validHex;
+      customThemeHex.value = validHex;
+
+      if (persist) {
+        localStorage.setItem('naraTheme', 'custom');
+        localStorage.setItem('naraCustomBg', validHex);
+      }
+      themeButtons.forEach((btn) => btn.classList.remove('active'));
+      return true;
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'custom') {
+        const savedCustom = localStorage.getItem('naraCustomBg') || '#89C2FF';
+        applyCustomThemeColor(savedCustom, false);
+        return;
+      }
+
+      clearCustomThemeStyles();
+      if (!theme || theme === 'default') {
+        document.body.removeAttribute('data-theme');
+      } else {
+        document.body.setAttribute('data-theme', theme);
+      }
+
+      themeButtons.forEach((btn) => {
+        const isActive = btn.getAttribute('data-theme-value') === (theme || 'default');
+        btn.classList.toggle('active', isActive);
+      });
+    }
+
+    function setLoggedIn(active) {
+      localStorage.setItem('naraSession', active ? '1' : '0');
+      if (!active) {
+        authToken = '';
+        activeUser = null;
+        localStorage.removeItem('naraAuthToken');
+      }
+    }
+
+    function isLoggedIn() {
+      return !!authToken && localStorage.getItem('naraSession') === '1';
+    }
+
+    function setMemberMode(active) {
+      document.body.classList.toggle('member-mode', active);
+      if (active) {
+        memberArea.classList.add('active');
+      } else {
+        memberArea.classList.remove('active');
+      }
+    }
+
+    async function updateMyPresence() {
+      if (!isLoggedIn()) return;
+      try {
+        await apiPost('/api/presence/ping', { token: authToken });
+      } catch {}
+    }
+
+    async function renderOnlineUsers() {
+      if (!isLoggedIn()) {
+        onlineMeta.textContent = 'Inte inloggad.';
+        onlineList.innerHTML = '<div class="online-item">Logga in för att se online.</div>';
+        return;
+      }
+
+      try {
+        const payload = await apiGet(`/api/online?token=${encodeURIComponent(authToken)}`);
+        const users = Array.isArray(payload.users) ? payload.users : [];
+        if (!users.length) {
+          onlineMeta.textContent = '0 online just nu.';
+          onlineList.innerHTML = '<div class="online-item">Ingen online just nu.</div>';
+          return;
+        }
+
+        onlineMeta.textContent = `${users.length} online just nu.`;
+        onlineList.innerHTML = users.map((user) => {
+          const isMe = activeUser && Number(user.id) === Number(activeUser.id);
+          return `
+            <div class="online-item">
+              <div class="online-left">
+                <span class="online-dot"></span>
+                <span class="online-name">${user.name || 'Medlem'}</span>
+                ${isMe ? '<span class="online-you">(du)</span>' : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch {
+        onlineMeta.textContent = 'Kunde inte hämta online-lista.';
+      }
+    }
+
+    function setActiveMemberPanel(panelName) {
+      const target = panelName || 'profile';
+      memberTabs.forEach((tab) => {
+        const isActive = tab.getAttribute('data-member-tab') === target;
+        tab.classList.toggle('active', isActive);
+      });
+      memberPanels.forEach((panel) => {
+        const isActive = panel.getAttribute('data-member-panel') === target;
+        panel.classList.toggle('active', isActive);
+      });
+      localStorage.setItem('naraMemberPanel', target);
+      if (target === 'mail') setMailAlert(false);
+    }
+
+    function ensureDefaultInbox(name) {
+      const existing = readJsonStorage('naraInbox', null);
+      if (existing && Array.isArray(existing) && existing.length) return;
+      const inbox = [
+        {
+          from: 'Nara Team',
+          subject: 'Välkommen till Nara',
+          message: `Kul att du är här, ${name}! Börja med att fylla i din profil.`,
+          time: 'Nyss'
+        },
+        {
+          from: 'Support',
+          subject: 'Tips för en bättre start',
+          message: 'Lägg till bild, ålder och några rader om dig själv för att hitta rätt vänner snabbare.',
+          time: 'Idag'
+        }
+      ];
+      saveJsonStorage('naraInbox', inbox);
+    }
+
+    function addInboxMessage(from, subject, message) {
+      const inbox = readJsonStorage('naraInbox', []);
+      inbox.unshift({
+        from,
+        subject,
+        message,
+        time: 'Nyss'
+      });
+      saveJsonStorage('naraInbox', inbox.slice(0, 60));
+      syncInboxWatcher();
+    }
+
+    async function syncServerInbox() {
+      if (!isLoggedIn()) return;
+      try {
+        const payload = await apiGet(`/api/inbox?token=${encodeURIComponent(authToken)}`);
+        const inbox = Array.isArray(payload.inbox) ? payload.inbox.map((item) => ({
+          from: item.from,
+          subject: item.subject,
+          message: item.message,
+          time: item.createdAt ? new Date(item.createdAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : 'Nyss'
+        })) : [];
+        saveJsonStorage('naraInbox', inbox);
+        syncInboxWatcher(true);
+      } catch {}
+    }
+
+    function renderInbox() {
+      const inbox = readJsonStorage('naraInbox', []);
+      if (!inbox.length) {
+        mailList.innerHTML = '<div class="mail-item"><p>Inga meddelanden ännu.</p></div>';
+        return;
+      }
+
+      mailList.innerHTML = inbox.map((mail) => `
+        <article class="mail-item">
+          <div class="mail-item-head">
+            <span>${mail.from}</span>
+            <span>${mail.time}</span>
+          </div>
+          <h4>${mail.subject}</h4>
+          <p>${mail.message}</p>
+        </article>
+      `).join('');
+    }
+
+    function setMailAlert(active) {
+      mailAlertDot.classList.toggle('active', active);
+      mailCard.classList.toggle('mail-alert', active);
+    }
+
+    function syncInboxWatcher(initial = false) {
+      const inbox = readJsonStorage('naraInbox', []);
+      const hasNew = inbox.length > lastInboxCount;
+      if (hasNew && !initial && isLoggedIn()) setMailAlert(true);
+      if (inbox.length !== lastInboxCount) renderInbox();
+      lastInboxCount = inbox.length;
+    }
+
+    function ensureDefaultChat() {
+      const chat = readJsonStorage('naraChat', null);
+      if (chat && Array.isArray(chat) && chat.length) return;
+      const defaultChat = [
+        { author: 'Nara Bot', text: 'Hej! Välkommen in i chatten.' },
+        { author: 'Nara Bot', text: 'Tips: Skriv en snabb presentation i din profil.' }
+      ];
+      saveJsonStorage('naraChat', defaultChat);
+    }
+
+    function renderChat() {
+      const chat = readJsonStorage('naraChat', []);
+      if (!chat.length) {
+        chatMessages.innerHTML = '<div class="chat-bubble">Inga meddelanden ännu.</div>';
+        return;
+      }
+      chatMessages.innerHTML = chat.map((msg) => `
+        <div class="chat-bubble ${msg.author === 'Du' ? 'me' : ''}">
+          <b>${msg.author}:</b> ${msg.text}
+        </div>
+      `).join('');
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function syncServerChat() {
+      if (!isLoggedIn()) return;
+      try {
+        const payload = await apiGet(`/api/chat?token=${encodeURIComponent(authToken)}&sinceId=${latestChatId}`);
+        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        if (messages.length) {
+          const current = readJsonStorage('naraChat', []);
+          const mapped = messages.map((m) => ({
+            author: activeUser && Number(m.fromUserId) === Number(activeUser.id) ? 'Du' : m.fromName,
+            text: m.text
+          }));
+          saveJsonStorage('naraChat', current.concat(mapped).slice(-80));
+          renderChat();
+        }
+        latestChatId = Number(payload.latestId || latestChatId || 0);
+      } catch {}
+    }
+
+    function renderDmUsers() {
+      if (!dmUsersCache.length) {
+        dmUsers.innerHTML = '<div class="online-item">Inga användare hittades.</div>';
+        return;
+      }
+
+      dmUsers.innerHTML = dmUsersCache.map((u) => {
+        const active = Number(u.id) === Number(selectedDmUserId);
+        return `<button class="dm-user-btn ${active ? 'active' : ''}" type="button" data-dm-user="${u.id}">${u.name}</button>`;
+      }).join('');
+
+      dmUsers.querySelectorAll('[data-dm-user]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          selectedDmUserId = Number(btn.getAttribute('data-dm-user') || '0');
+          latestDmId = 0;
+          saveJsonStorage('naraDmTarget', selectedDmUserId);
+          saveJsonStorage('naraDmMessages', []);
+          renderDmUsers();
+          await syncDmThread();
+        });
+      });
+    }
+
+    function renderDmMessages() {
+      const user = dmUsersCache.find((u) => Number(u.id) === Number(selectedDmUserId));
+      if (!user) {
+        dmTitle.textContent = 'Ingen mottagare vald.';
+        dmMessages.innerHTML = '<div class="dm-bubble">Välj person i listan till vänster.</div>';
+        return;
+      }
+      dmTitle.textContent = `Chattar med ${user.name}`;
+      const messages = readJsonStorage('naraDmMessages', []);
+      if (!messages.length) {
+        dmMessages.innerHTML = '<div class="dm-bubble">Inga privata meddelanden ännu.</div>';
+        return;
+      }
+      dmMessages.innerHTML = messages.map((m) => `
+        <div class="dm-bubble ${m.author === 'Du' ? 'me' : ''}">
+          <b>${m.author}:</b> ${m.text}
+        </div>
+      `).join('');
+      dmMessages.scrollTop = dmMessages.scrollHeight;
+    }
+
+    async function syncDmUsers() {
+      if (!isLoggedIn()) return;
+      try {
+        const payload = await apiGet(`/api/users/search?token=${encodeURIComponent(authToken)}&q=`);
+        const users = Array.isArray(payload.users) ? payload.users : [];
+        dmUsersCache = users.filter((u) => !activeUser || Number(u.id) !== Number(activeUser.id));
+        if (!selectedDmUserId && dmUsersCache.length) {
+          const remembered = Number(readJsonStorage('naraDmTarget', 0) || 0);
+          selectedDmUserId = dmUsersCache.some((u) => Number(u.id) === remembered)
+            ? remembered
+            : Number(dmUsersCache[0].id);
+        }
+        if (selectedDmUserId && !dmUsersCache.some((u) => Number(u.id) === Number(selectedDmUserId))) {
+          selectedDmUserId = dmUsersCache.length ? Number(dmUsersCache[0].id) : 0;
+          latestDmId = 0;
+          saveJsonStorage('naraDmMessages', []);
+        }
+        renderDmUsers();
+        renderDmMessages();
+      } catch {}
+    }
+
+    async function syncDmThread() {
+      if (!isLoggedIn() || !selectedDmUserId) {
+        renderDmMessages();
+        return;
+      }
+      try {
+        const payload = await apiGet(`/api/dm/thread?token=${encodeURIComponent(authToken)}&withUserId=${selectedDmUserId}&sinceId=${latestDmId}`);
+        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        if (messages.length) {
+          const current = readJsonStorage('naraDmMessages', []);
+          const mapped = messages.map((m) => ({
+            author: activeUser && Number(m.fromUserId) === Number(activeUser.id) ? 'Du' : m.fromName,
+            text: m.text
+          }));
+          saveJsonStorage('naraDmMessages', current.concat(mapped).slice(-150));
+        }
+        latestDmId = Number(payload.latestId || latestDmId || 0);
+        renderDmMessages();
+      } catch {}
+    }
+
+    async function renderSearchResults(query = '') {
+      if (!isLoggedIn()) return;
+      try {
+        const q = encodeURIComponent(String(query || '').trim());
+        const payload = await apiGet(`/api/users/search?token=${encodeURIComponent(authToken)}&q=${q}`);
+        const users = Array.isArray(payload.users) ? payload.users : [];
+        if (!users.length) {
+          searchResults.innerHTML = '<div class="search-item">Ingen profil matchade sökningen.</div>';
+          return;
+        }
+
+        searchResults.innerHTML = users.map((p) => `
+          <div class="search-item">
+            <b>${p.name}</b>
+            <span>Ålder: ${p.age || '-'}</span>
+            <p>${p.bio || 'Ingen bio ännu.'}</p>
+          </div>
+        `).join('');
+      } catch {
+        searchResults.innerHTML = '<div class="search-item">Kunde inte söka profiler just nu.</div>';
+      }
+    }
+
+    async function activateMemberArea() {
+      if (!authToken) {
+        setLoggedIn(false);
+        setMemberMode(false);
+        return;
+      }
+
+      try {
+        const me = await apiGet(`/api/auth/me?token=${encodeURIComponent(authToken)}`);
+        activeUser = me.user;
+        saveJsonStorage('naraAccount', me.user);
+        setLoggedIn(true);
+      } catch {
+        setLoggedIn(false);
+        setMemberMode(false);
+        return;
+      }
+
+      setMemberMode(true);
+      memberGreeting.textContent = `Inloggad som ${activeUser.name}. Uppdatera din profil här.`;
+      setMailAlert(false);
+      setActiveMemberPanel(localStorage.getItem('naraMemberPanel') || 'profile');
+
+      await syncServerInbox();
+      await syncServerChat();
+      await syncDmUsers();
+      await syncDmThread();
+      await renderSearchResults();
+      await updateMyPresence();
+      await renderOnlineUsers();
+
+      try {
+        const profilePayload = await apiGet(`/api/profile?token=${encodeURIComponent(authToken)}`);
+        const profile = profilePayload.profile || { age: '', bio: '', imageData: '' };
+        saveJsonStorage('naraProfile', profile);
+        profileAge.value = profile.age || '';
+        profileBio.value = profile.bio || '';
+        if (profile.imageData) avatarPreview.src = profile.imageData;
+      } catch {}
+    }
+
+    const savedTheme = localStorage.getItem('naraTheme') || 'default';
+    applyTheme(savedTheme);
+    const savedUiColors = loadUiColors();
+    if (savedUiColors) applyUiColors(savedUiColors);
+    else syncUiInputs(getThemeColorSnapshot());
+
+    openButtons.forEach((btn) => btn.addEventListener('click', openSignup));
+    loginButtons.forEach((btn) => btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      openLogin();
+    }));
+    closeSignup.addEventListener('click', closeSignupModal);
+    closeLogin.addEventListener('click', closeLoginModal);
+
+    signupModal.addEventListener('click', (event) => {
+      if (event.target === signupModal) closeSignupModal();
+    });
+    loginModal.addEventListener('click', (event) => {
+      if (event.target === loginModal) closeLoginModal();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeSignupModal();
+      if (event.key === 'Escape') closeLoginModal();
+    });
+
+    signupForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(signupForm);
+      const name = String(formData.get('name') || '').trim();
+      const email = String(formData.get('email') || '').trim();
+      const password = String(formData.get('password') || '');
+
+      if (!name || !email || password.length < 6) {
+        signupSuccess.textContent = 'Fyll i alla fält korrekt för att fortsätta.';
+        return;
+      }
+
+      try {
+        const payload = await apiPost('/api/auth/register', { name, email, password });
+        authToken = payload.token;
+        localStorage.setItem('naraAuthToken', authToken);
+        saveJsonStorage('naraAccount', payload.user);
+        setLoggedIn(true);
+        signupSuccess.textContent = `Konto skapat! Välkommen, ${payload.user.name}.`;
+        signupForm.reset();
+        await activateMemberArea();
+        memberArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(closeSignupModal, 900);
+      } catch (error) {
+        signupSuccess.textContent = error.message || 'Kunde inte skapa konto.';
+      }
+    });
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(loginForm);
+      const email = String(formData.get('email') || '').trim();
+      const password = String(formData.get('password') || '');
+
+      try {
+        const payload = await apiPost('/api/auth/login', { email, password });
+        authToken = payload.token;
+        localStorage.setItem('naraAuthToken', authToken);
+        saveJsonStorage('naraAccount', payload.user);
+        setLoggedIn(true);
+        loginStatus.textContent = `Inloggad! Välkommen tillbaka, ${payload.user.name}.`;
+        await activateMemberArea();
+        memberArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        loginForm.reset();
+        setTimeout(closeLoginModal, 900);
+      } catch (error) {
+        loginStatus.textContent = error.message || 'Fel e-post eller lösenord.';
+      }
+    });
+
+    profileImageInput.addEventListener('change', () => {
+      const file = profileImageInput.files && profileImageInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        avatarPreview.src = String(reader.result || '');
+        const profile = readJsonStorage('naraProfile', {});
+        profile.imageData = avatarPreview.src;
+        saveJsonStorage('naraProfile', profile);
+        profileStatus.textContent = 'Profilbild sparad.';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    profileForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const age = String(profileAge.value || '').trim();
+      const bio = String(profileBio.value || '').trim();
+
+      if (!age || !bio) {
+        profileStatus.textContent = 'Fyll i både ålder och om mig.';
+        return;
+      }
+
+      const profile = readJsonStorage('naraProfile', {});
+      profile.age = age;
+      profile.bio = bio;
+      if (!profile.imageData) profile.imageData = avatarPreview.src;
+      saveJsonStorage('naraProfile', profile);
+      try {
+        if (isLoggedIn()) {
+          await apiPost('/api/profile/save', {
+            token: authToken,
+            age: profile.age,
+            bio: profile.bio,
+            imageData: profile.imageData || ''
+          });
+        }
+        profileStatus.textContent = 'Profil sparad.';
+      } catch {
+        profileStatus.textContent = 'Kunde inte spara mot servern just nu.';
+      }
+    });
+
+    chatForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const text = String(chatInput.value || '').trim();
+      if (!text) return;
+      if (!isLoggedIn()) return;
+      try {
+        await apiPost('/api/chat/send', { token: authToken, text });
+        chatInput.value = '';
+        await syncServerChat();
+      } catch {}
+    });
+
+    dmForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const text = String(dmInput.value || '').trim();
+      if (!text || !selectedDmUserId || !isLoggedIn()) return;
+      try {
+        await apiPost('/api/dm/send', { token: authToken, toUserId: selectedDmUserId, text });
+        dmInput.value = '';
+        await syncDmThread();
+        await syncServerInbox();
+      } catch {}
+    });
+
+    searchForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await renderSearchResults(searchInput.value || '');
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        if (authToken) await apiPost('/api/auth/logout', { token: authToken });
+      } catch {}
+      setLoggedIn(false);
+      setMemberMode(false);
+      setMailAlert(false);
+      localStorage.removeItem('naraAccount');
+      localStorage.removeItem('naraSession');
+      localStorage.removeItem('naraDmMessages');
+      localStorage.removeItem('naraDmTarget');
+      selectedDmUserId = 0;
+      latestDmId = 0;
+      dmUsersCache = [];
+      await renderOnlineUsers();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    mailCard.addEventListener('click', () => {
+      setMailAlert(false);
+    });
+
+    memberTabs.forEach((tab) => {
+      tab.addEventListener('click', async () => {
+        const panelName = tab.getAttribute('data-member-tab') || 'profile';
+        setActiveMemberPanel(panelName);
+        if (panelName === 'pm') {
+          await syncDmUsers();
+          await syncDmThread();
+        }
+      });
+    });
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'naraInbox') syncInboxWatcher();
+      if (event.key === 'naraAuthToken') {
+        authToken = localStorage.getItem('naraAuthToken') || '';
+        activateMemberArea();
+      }
+    });
+
+    setInterval(async () => {
+      if (isLoggedIn()) {
+        syncInboxWatcher();
+        await updateMyPresence();
+        await renderOnlineUsers();
+        await syncServerInbox();
+        await syncServerChat();
+        await syncDmUsers();
+        await syncDmThread();
+      }
+    }, 1800);
+
+    themeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const theme = btn.getAttribute('data-theme-value') || 'default';
+        localStorage.setItem('naraTheme', theme);
+        applyTheme(theme);
+        const existingUi = loadUiColors();
+        if (existingUi) applyUiColors(existingUi);
+        else syncUiInputs(getThemeColorSnapshot());
+      });
+    });
+
+    customThemePicker.addEventListener('input', () => {
+      customThemeHex.value = customThemePicker.value.toUpperCase();
+    });
+
+    applyCustomThemeBtn.addEventListener('click', () => {
+      const pickedHex = normalizeHexColor(customThemeHex.value || customThemePicker.value);
+      if (!pickedHex) {
+        customThemeHex.value = '#89C2FF';
+        applyCustomThemeColor('#89C2FF', true);
+        const existingUi = loadUiColors();
+        if (existingUi) applyUiColors(existingUi);
+        else syncUiInputs(getThemeColorSnapshot());
+        return;
+      }
+      applyCustomThemeColor(pickedHex, true);
+      const existingUi = loadUiColors();
+      if (existingUi) applyUiColors(existingUi);
+      else syncUiInputs(getThemeColorSnapshot());
+    });
+
+    uiColorInputs.forEach((input) => {
+      input.addEventListener('input', () => {
+        const liveColors = collectUiColorsFromInputs();
+        applyUiColors(liveColors);
+      });
+    });
+
+    saveDesignColorsBtn.addEventListener('click', () => {
+      const colors = collectUiColorsFromInputs();
+      saveUiColors(colors);
+      profileStatus.textContent = 'Design sparad.';
+    });
+
+    resetDesignColorsBtn.addEventListener('click', () => {
+      resetUiColors();
+      profileStatus.textContent = 'Design återställd.';
+    });
+
+    (async () => {
+      if (authToken) {
+        try {
+          const me = await apiGet(`/api/auth/me?token=${encodeURIComponent(authToken)}`);
+          activeUser = me.user;
+          setLoggedIn(true);
+          saveJsonStorage('naraAccount', me.user);
+        } catch {
+          setLoggedIn(false);
+        }
+      }
+      await activateMemberArea();
+    })();
+  </script>
+</body>
+</html>

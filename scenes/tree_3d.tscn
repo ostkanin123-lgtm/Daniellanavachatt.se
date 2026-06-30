@@ -1,0 +1,31 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/generated/tree_leaves_frame_0_1774599541.png" id="1_tex"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.2
+bottom_radius = 0.3
+height = 1.5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+albedo_color = Color(0.39, 0.26, 0.13, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 1.0
+height = 1.5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2"]
+albedo_texture = ExtResource("1_tex")
+uv1_scale = Vector3(3, 3, 3)
+
+[node name="Tree3D" type="Node3D"]
+
+[node name="Trunk" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")
+
+[node name="Leaves" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_2")

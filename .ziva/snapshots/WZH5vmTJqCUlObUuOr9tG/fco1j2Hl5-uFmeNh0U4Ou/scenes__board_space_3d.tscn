@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://djtq85hn0gjdi"]
+
+[ext_resource type="Script" uid="uid://doinvkuojwvp8" path="res://scripts/board_space_3d.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://ce8r0gjkx6bb4" path="res://scenes/main.tscn" id="2_15ekx"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+albedo_color = Color(0.2, 0.8, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("StandardMaterial3D_1")
+size = Vector3(4, 0.3, 4)
+
+[node name="BoardSpace3D" type="Node3D" unique_id=977072174]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+script = ExtResource("1_script")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=753399730]
+mesh = SubResource("BoxMesh_1")
+
+[node name="Main" parent="MeshInstance3D" unique_id=244006328 instance=ExtResource("2_15ekx")]

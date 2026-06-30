@@ -1,0 +1,38 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://ean24iut44oh"
+path.s3tc="res://.godot/imported/desert__rocks__stones__pack_3.png-e60f2c0a1880fa1855eeda4cbd54c2b9.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "9f6f55622b21f2a1984b3a0febdd4e7f"
+}
+
+[deps]
+
+source_file="res://desert__rocks__stones__pack_3.png"
+dest_files=["res://.godot/imported/desert__rocks__stones__pack_3.png-e60f2c0a1880fa1855eeda4cbd54c2b9.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

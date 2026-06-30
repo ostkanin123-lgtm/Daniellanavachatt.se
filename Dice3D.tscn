@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/dice_3d.gd" id="1_1"]
+[ext_resource type="PackedScene" path="res://mario_party_dice_block.glb" id="2_1"]
+
+[node name="Dice3D" type="Node3D"]
+script = ExtResource("1_1")
+
+[node name="DiceModel" parent="." instance=ExtResource("2_1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="NumberLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+pixel_size = 0.01
+billboard = 1
+text = "1"
+font_size = 128
+outline_size = 24

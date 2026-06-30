@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3 uid="uid://c6v6v6v6v6v6v"]
+[ext_resource type="PackedScene" uid="uid://be87l0v5h2h0l" path="res://desert__rocks__stones__pack.glb" id="1_rock"]
+
+[node name="Rock_Large" instance=ExtResource("1_rock")]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0)

@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://w3pin5w2qymf"]
+
+[ext_resource type="Script" path="res://scripts/dice_3d.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://bfrgdpukxkf15" path="res://mario_party_dice_block.glb" id="2_dice"]
+
+[node name="Dice3D" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="DiceModel" parent="." instance=ExtResource("2_dice")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)

@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://djtq85hn0gjdi"]
+
+[ext_resource type="Script" uid="uid://doinvkuojwvp8" path="res://scripts/board_space_3d.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://ce8r0gjkx6bb4" path="res://scenes/main.tscn" id="2_15ekx"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+albedo_color = Color(0.2, 0.8, 0.2, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+material = SubResource("StandardMaterial3D_1")
+top_radius = 1.5
+bottom_radius = 1.4
+height = 0.25
+
+[node name="BoardSpace3D" type="Node3D" unique_id=977072174]
+transform = Transform3D(0.99779296, -0.05964835, -0.029175952, 0.061658412, 0.99537337, 0.07368881, 0.02464553, -0.075325124, 0.9968544, 0, 0, 0)
+script = ExtResource("1_script")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=753399730]
+transform = Transform3D(0.86652255, 9.429641e-09, 0.49913836, -7.450581e-09, 1, -1.4901161e-08, -0.49913836, 0, 0.86652255, 0.3520292, -1.4794766, 6.6344833)
+mesh = SubResource("CylinderMesh_1")
+
+[node name="Main" parent="MeshInstance3D" unique_id=244006328 instance=ExtResource("2_15ekx")]

@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/board_space_3d.gd" id="1_script"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 0.2
+
+[node name="BoardSpace3D" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CylinderMesh_1")

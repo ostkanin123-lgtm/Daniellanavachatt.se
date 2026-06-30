@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" uid="uid://v6m08e0u1q0x" path="res://nintendo_switch_-_super_mario_party_-_mario.glb" id="1_mario"]
+
+[node name="Player3D" type="Node3D"]
+
+[node name="Mario" parent="." instance=ExtResource("1_mario")]
+transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0)

@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/player_3d.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://v6m08e0u1q0x" path="res://nintendo_switch_-_super_mario_party_-_mario.glb" id="2_mario"]
+
+[node name="Player3D" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="MarioModel" parent="." instance=ExtResource("2_mario")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="NameLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+billboard = 1
+text = "Mario"
+font_size = 64
+outline_size = 12
