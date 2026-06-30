@@ -1,12 +1,18 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const querystring = require('querystring');
 const { randomUUID } = require('crypto');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8080;
 const ROOT = __dirname;
 const INDEX_PATH = path.join(ROOT, 'index.html');
 const DATA_PATH = path.join(ROOT, 'social-data.json');
+const STRIPE_SECRET_KEY = String(process.env.STRIPE_SECRET_KEY || '');
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || '').trim();
+const STRIPE_MONTHLY_PRICE_SEK = Number(process.env.STRIPE_MONTHLY_PRICE_SEK || process.env.STRIPE_SIGNUP_PRICE_SEK || 7900);
+const ACCESS_PERIOD_MS = 1000 * 60 * 60 * 24 * 30;
 
 const rooms = new Map();
 const CORS_HEADERS = {
@@ -25,6 +31,8 @@ function defaultData() {
     profiles: {},
     inbox: {},
     sessions: {},
+    pendingSignups: {},
+    pendingRenewals: {},
     chat: [],
     dms: [],
     nextIds: {
@@ -114,8 +122,23 @@ function userPublic(user) {
     id: user.id,
     name: user.name,
     email: user.email,
-    createdAt: user.createdAt
+    createdAt: user.createdAt,
+    paidMember: !!user.paidMember,
+    paidUntilTs: Number(user.paidUntilTs || 0),
+    hasAccess: membershipActive(user)
   };
+}
+
+function paymentEnabled() {
+  return !!STRIPE_SECRET_KEY;
+}
+
+function membershipActive(user) {
+  if (!paymentEnabled()) return true;
+  if (!user) return false;
+  const paidUntilTs = Number(user.paidUntilTs || 0);
+  if (paidUntilTs > Date.now()) return true;
+  return !!user.paidMember && !paidUntilTs;
 }
 
 function createSession(userId) {
@@ -129,7 +152,8 @@ function createSession(userId) {
   return token;
 }
 
-function authFrom(req, body, urlObj) {
+function authFrom(req, body, urlObj, options = {}) {
+  const allowExpiredMembership = !!options.allowExpiredMembership;
   const fromBody = body && body.token ? String(body.token) : '';
   const fromQuery = urlObj ? String(urlObj.searchParams.get('token') || '') : '';
   const token = fromBody || fromQuery;
@@ -137,6 +161,9 @@ function authFrom(req, body, urlObj) {
   if (!session) return { ok: false, error: 'Ej inloggad.' };
   const user = data.users.find((u) => u.id === session.userId);
   if (!user) return { ok: false, error: 'Ogiltig session.' };
+  if (!allowExpiredMembership && !membershipActive(user)) {
+    return { ok: false, error: 'Ditt medlemskap har gått ut. Förnya för att få full tillgång.' };
+  }
   session.lastSeen = Date.now();
   return { ok: true, token, session, user };
 }
@@ -147,6 +174,32 @@ function cleanupSessions() {
   Object.keys(data.sessions).forEach((token) => {
     if (now - Number(data.sessions[token].lastSeen || 0) > 1000 * 60 * 60 * 24 * 7) {
       delete data.sessions[token];
+      changed = true;
+    }
+  });
+  if (changed) scheduleSave();
+}
+
+function cleanupPendingSignups() {
+  const now = Date.now();
+  let changed = false;
+  Object.keys(data.pendingSignups || {}).forEach((id) => {
+    const item = data.pendingSignups[id];
+    if (!item || Number(item.expiresAt || 0) < now || item.status === 'completed') {
+      delete data.pendingSignups[id];
+      changed = true;
+    }
+  });
+  if (changed) scheduleSave();
+}
+
+function cleanupPendingRenewals() {
+  const now = Date.now();
+  let changed = false;
+  Object.keys(data.pendingRenewals || {}).forEach((id) => {
+    const item = data.pendingRenewals[id];
+    if (!item || Number(item.expiresAt || 0) < now || item.status === 'completed') {
+      delete data.pendingRenewals[id];
       changed = true;
     }
   });
@@ -171,7 +224,67 @@ function addInboxMessage(userId, fromName, subject, message) {
   scheduleSave();
 }
 
+function createUser({ name, email, password, paidMember, paidUntilTs }) {
+  const user = {
+    id: data.nextIds.user++,
+    name,
+    email,
+    password,
+    paidMember: !!paidMember,
+    paidUntilTs: Number(paidUntilTs || 0),
+    createdAt: nowIso()
+  };
+  data.users.push(user);
+  data.profiles[user.id] = { age: '', bio: '', imageData: '', updatedAt: nowIso() };
+  addInboxMessage(user.id, 'Nara Team', 'Välkommen till Nara', `Kul att du är här, ${name}!`);
+  scheduleSave();
+  return user;
+}
+
+function getBaseUrl(req) {
+  if (PUBLIC_BASE_URL) return PUBLIC_BASE_URL.replace(/\/+$/, '');
+  const host = String(req.headers.host || 'localhost:8080');
+  const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() || 'http';
+  return `${proto}://${host}`;
+}
+
+function stripeRequest(method, endpoint, formBody) {
+  return new Promise((resolve, reject) => {
+    const payload = formBody ? querystring.stringify(formBody) : '';
+    const req = https.request(
+      {
+        hostname: 'api.stripe.com',
+        path: endpoint,
+        method,
+        headers: {
+          Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(payload)
+        }
+      },
+      (res) => {
+        let raw = '';
+        res.on('data', (chunk) => { raw += chunk; });
+        res.on('end', () => {
+          let jsonBody = {};
+          try { jsonBody = raw ? JSON.parse(raw) : {}; } catch {}
+          if (res.statusCode >= 200 && res.statusCode < 300) return resolve(jsonBody);
+          reject(new Error((jsonBody && jsonBody.error && jsonBody.error.message) || 'Stripe error'));
+        });
+      }
+    );
+
+    req.on('error', reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
 function handleRegister(req, res, body) {
+  if (paymentEnabled()) {
+    return json(res, 403, { error: 'Registrering sker via betalningsflödet.' });
+  }
+
   const name = String(body.name || '').trim();
   const email = normalizeEmail(body.email);
   const password = String(body.password || '');
@@ -184,19 +297,175 @@ function handleRegister(req, res, body) {
     return json(res, 409, { error: 'E-post används redan.' });
   }
 
-  const user = {
-    id: data.nextIds.user++,
+  const user = createUser({ name, email, password, paidMember: false });
+  const token = createSession(user.id);
+  json(res, 200, { token, user: userPublic(user) });
+}
+
+function handlePaymentStatus(req, res) {
+  json(res, 200, {
+    enabled: paymentEnabled(),
+    currency: 'sek',
+    amountSek: Math.max(1, Math.floor(STRIPE_MONTHLY_PRICE_SEK / 100)),
+    periodDays: 30
+  });
+}
+
+async function handleCreateSignupCheckout(req, res, body) {
+  if (!paymentEnabled()) {
+    return json(res, 503, { error: 'Betalning är inte aktiverad på servern.' });
+  }
+
+  const name = String(body.name || '').trim();
+  const email = normalizeEmail(body.email);
+  const password = String(body.password || '');
+
+  if (!name || !email || password.length < 6) {
+    return json(res, 400, { error: 'Ogiltiga uppgifter.' });
+  }
+  if (findUserByEmail(email)) {
+    return json(res, 409, { error: 'E-post används redan.' });
+  }
+
+  const pendingId = randomUUID();
+  data.pendingSignups[pendingId] = {
+    id: pendingId,
     name,
     email,
     password,
-    createdAt: nowIso()
+    createdAt: nowIso(),
+    expiresAt: Date.now() + 1000 * 60 * 30,
+    status: 'pending'
   };
-  data.users.push(user);
-  data.profiles[user.id] = { age: '', bio: '', imageData: '', updatedAt: nowIso() };
-  addInboxMessage(user.id, 'Nara Team', 'Välkommen till Nara', `Kul att du är här, ${name}!`);
-  const token = createSession(user.id);
   scheduleSave();
+
+  const baseUrl = getBaseUrl(req);
+  const session = await stripeRequest('POST', '/v1/checkout/sessions', {
+    mode: 'payment',
+    'line_items[0][price_data][currency]': 'sek',
+    'line_items[0][price_data][unit_amount]': String(Math.max(100, STRIPE_MONTHLY_PRICE_SEK)),
+    'line_items[0][price_data][product_data][name]': 'Nara full tillgång - 1 månad',
+    'line_items[0][quantity]': '1',
+    'metadata[pendingId]': pendingId,
+    success_url: `${baseUrl}/signup.html?paid=1&pending=${encodeURIComponent(pendingId)}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/signup.html?cancel=1`
+  });
+
+  json(res, 200, { checkoutUrl: session.url });
+}
+
+async function handleCompleteSignup(req, res, body) {
+  if (!paymentEnabled()) {
+    return json(res, 503, { error: 'Betalning är inte aktiverad på servern.' });
+  }
+
+  const pendingId = String(body.pendingId || '').trim();
+  const sessionId = String(body.sessionId || '').trim();
+  if (!pendingId || !sessionId) {
+    return json(res, 400, { error: 'Saknar betalningsdata.' });
+  }
+
+  const pending = data.pendingSignups[pendingId];
+  if (!pending || pending.status === 'completed' || Number(pending.expiresAt || 0) < Date.now()) {
+    return json(res, 410, { error: 'Registreringen har gått ut. Försök igen.' });
+  }
+
+  if (findUserByEmail(pending.email)) {
+    pending.status = 'completed';
+    scheduleSave();
+    return json(res, 409, { error: 'E-post används redan.' });
+  }
+
+  const session = await stripeRequest('GET', `/v1/checkout/sessions/${encodeURIComponent(sessionId)}`);
+  if (String(session.payment_status || '') !== 'paid') {
+    return json(res, 402, { error: 'Betalningen är inte klar.' });
+  }
+  if (String((session.metadata && session.metadata.pendingId) || '') !== pendingId) {
+    return json(res, 403, { error: 'Betalning matchar inte registreringen.' });
+  }
+
+  const user = createUser({
+    name: pending.name,
+    email: pending.email,
+    password: pending.password,
+    paidMember: true,
+    paidUntilTs: Date.now() + ACCESS_PERIOD_MS
+  });
+  pending.status = 'completed';
+  scheduleSave();
+  const token = createSession(user.id);
   json(res, 200, { token, user: userPublic(user) });
+}
+
+async function handleCreateRenewCheckout(req, res, body) {
+  if (!paymentEnabled()) {
+    return json(res, 503, { error: 'Betalning är inte aktiverad på servern.' });
+  }
+
+  const auth = authFrom(req, body, null, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+
+  const pendingId = randomUUID();
+  data.pendingRenewals[pendingId] = {
+    id: pendingId,
+    userId: auth.user.id,
+    createdAt: nowIso(),
+    expiresAt: Date.now() + 1000 * 60 * 30,
+    status: 'pending'
+  };
+  scheduleSave();
+
+  const baseUrl = getBaseUrl(req);
+  const session = await stripeRequest('POST', '/v1/checkout/sessions', {
+    mode: 'payment',
+    'line_items[0][price_data][currency]': 'sek',
+    'line_items[0][price_data][unit_amount]': String(Math.max(100, STRIPE_MONTHLY_PRICE_SEK)),
+    'line_items[0][price_data][product_data][name]': 'Nara full tillgång - förnya 1 månad',
+    'line_items[0][quantity]': '1',
+    'metadata[pendingRenewalId]': pendingId,
+    'metadata[userId]': String(auth.user.id),
+    success_url: `${baseUrl}/pip.html?renew=1&renewal=${encodeURIComponent(pendingId)}&session_id={CHECKOUT_SESSION_ID}#memberArea`,
+    cancel_url: `${baseUrl}/pip.html?renew_cancel=1#memberArea`
+  });
+
+  json(res, 200, { checkoutUrl: session.url });
+}
+
+async function handleCompleteRenew(req, res, body) {
+  if (!paymentEnabled()) {
+    return json(res, 503, { error: 'Betalning är inte aktiverad på servern.' });
+  }
+
+  const auth = authFrom(req, body, null, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+
+  const renewalId = String(body.renewalId || '').trim();
+  const sessionId = String(body.sessionId || '').trim();
+  if (!renewalId || !sessionId) return json(res, 400, { error: 'Saknar förnyelsedata.' });
+
+  const pending = data.pendingRenewals[renewalId];
+  if (!pending || pending.status === 'completed' || Number(pending.expiresAt || 0) < Date.now()) {
+    return json(res, 410, { error: 'Förnyelsen har gått ut. Försök igen.' });
+  }
+  if (Number(pending.userId) !== Number(auth.user.id)) {
+    return json(res, 403, { error: 'Förnyelsen tillhör inte detta konto.' });
+  }
+
+  const session = await stripeRequest('GET', `/v1/checkout/sessions/${encodeURIComponent(sessionId)}`);
+  if (String(session.payment_status || '') !== 'paid') {
+    return json(res, 402, { error: 'Betalningen är inte klar.' });
+  }
+  if (String((session.metadata && session.metadata.pendingRenewalId) || '') !== renewalId) {
+    return json(res, 403, { error: 'Betalning matchar inte förnyelsen.' });
+  }
+
+  const now = Date.now();
+  const currentPaidUntil = Number(auth.user.paidUntilTs || 0);
+  auth.user.paidMember = true;
+  auth.user.paidUntilTs = Math.max(now, currentPaidUntil) + ACCESS_PERIOD_MS;
+  pending.status = 'completed';
+  scheduleSave();
+  json(res, 200, { ok: true, user: userPublic(auth.user) });
 }
 
 function handleLogin(req, res, body) {
@@ -207,13 +476,12 @@ function handleLogin(req, res, body) {
   if (!user || user.password !== password) {
     return json(res, 401, { error: 'Fel e-post eller lösenord.' });
   }
-
   const token = createSession(user.id);
-  json(res, 200, { token, user: userPublic(user) });
+  json(res, 200, { token, user: userPublic(user), membershipExpired: !membershipActive(user) });
 }
 
 function handleMe(req, res, body, urlObj) {
-  const auth = authFrom(req, body, urlObj);
+  const auth = authFrom(req, body, urlObj, { allowExpiredMembership: true });
   if (!auth.ok) return json(res, 401, { error: auth.error });
   json(res, 200, { user: userPublic(auth.user) });
 }
@@ -411,6 +679,8 @@ function cleanupRooms() {
 }
 setInterval(cleanupRooms, 1000 * 60 * 5).unref();
 setInterval(cleanupSessions, 1000 * 60 * 10).unref();
+setInterval(cleanupPendingSignups, 1000 * 60 * 10).unref();
+setInterval(cleanupPendingRenewals, 1000 * 60 * 10).unref();
 
 function handleJoin(req, res, body) {
   const code = safeCode(body.roomCode);
@@ -552,6 +822,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Social API
+    if (req.method === 'GET' && pathname === '/api/payments/status') return handlePaymentStatus(req, res);
+    if (req.method === 'POST' && pathname === '/api/payments/create-signup-checkout') return handleCreateSignupCheckout(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/payments/complete-signup') return handleCompleteSignup(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/payments/create-renew-checkout') return handleCreateRenewCheckout(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/payments/complete-renew') return handleCompleteRenew(req, res, await parseBody(req));
+
     if (req.method === 'POST' && pathname === '/api/auth/register') return handleRegister(req, res, await parseBody(req));
     if (req.method === 'POST' && pathname === '/api/auth/login') return handleLogin(req, res, await parseBody(req));
     if (req.method === 'GET' && pathname === '/api/auth/me') return handleMe(req, res, {}, urlObj);

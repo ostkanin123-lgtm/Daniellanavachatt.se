@@ -541,6 +541,26 @@
       font-weight: 600;
     }
 
+    .member-plan-box {
+      border: 1px solid var(--frame-color);
+      border-radius: 12px;
+      background: #f7fbff;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .member-plan-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--ink);
+    }
+
+    .member-plan-meta {
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-size: .95rem;
+    }
+
     .mail-list {
       display: grid;
       gap: 10px;
@@ -1033,6 +1053,11 @@
       <article class="card member-card member-panel active" data-member-panel="profile">
         <h3>Min profil</h3>
         <p id="memberGreeting">Fyll i din profil så andra lär känna dig bättre.</p>
+        <div class="member-plan-box">
+          <div class="member-plan-title">Medlemskap</div>
+          <div class="member-plan-meta" id="memberPlanStatus">Kontrollerar status...</div>
+          <button class="btn btn-primary" id="renewMembershipBtn" type="button">Förnya medlemskap (79 kr / månad)</button>
+        </div>
         <div class="avatar-row">
           <img class="avatar-preview" id="avatarPreview" alt="Profilbild" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='36' fill='%23e7edf6'/%3E%3Ccircle cx='36' cy='29' r='13' fill='%23b6c4d7'/%3E%3Crect x='14' y='47' width='44' height='19' rx='9.5' fill='%23b6c4d7'/%3E%3C/svg%3E" />
           <input id="profileImageInput" type="file" accept="image/*" />
@@ -1205,6 +1230,8 @@
     const profileImageInput = document.getElementById('profileImageInput');
     const avatarPreview = document.getElementById('avatarPreview');
     const profileStatus = document.getElementById('profileStatus');
+    const memberPlanStatus = document.getElementById('memberPlanStatus');
+    const renewMembershipBtn = document.getElementById('renewMembershipBtn');
     const mailList = document.getElementById('mailList');
     const mailCard = document.getElementById('mailCard');
     const mailAlertDot = document.getElementById('mailAlertDot');
@@ -1229,7 +1256,7 @@
     const uiColorInputs = document.querySelectorAll('[data-ui-color]');
     const saveDesignColorsBtn = document.getElementById('saveDesignColorsBtn');
     const resetDesignColorsBtn = document.getElementById('resetDesignColorsBtn');
-    const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8080' : '';
+    const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8081' : '';
     let authToken = localStorage.getItem('naraAuthToken') || '';
     let activeUser = null;
     let latestChatId = 0;
@@ -1237,6 +1264,7 @@
     let dmUsersCache = [];
     let selectedDmUserId = 0;
     let lastInboxCount = 0;
+    let renewalHandled = false;
 
     setInterval(() => {
       i = (i + 1) % quotes.length;
@@ -1305,6 +1333,69 @@
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'API-fel');
       return payload;
+    }
+
+    function formatPaidUntil(ts) {
+      const n = Number(ts || 0);
+      if (!n) return 'Inte aktivt just nu.';
+      try {
+        return new Date(n).toLocaleDateString('sv-SE', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } catch {
+        return 'Okänt datum';
+      }
+    }
+
+    function refreshMembershipUi() {
+      if (!activeUser) {
+        memberPlanStatus.textContent = 'Inte inloggad.';
+        renewMembershipBtn.style.display = 'none';
+        return;
+      }
+      const untilText = formatPaidUntil(activeUser.paidUntilTs);
+      if (activeUser.hasAccess) {
+        memberPlanStatus.textContent = `Full tillgång aktiv till ${untilText}.`;
+      } else {
+        memberPlanStatus.textContent = `Medlemskapet har gått ut (${untilText}). Förnya för full tillgång i 1 månad.`;
+      }
+      renewMembershipBtn.style.display = 'inline-flex';
+    }
+
+    async function completeRenewFromUrlIfNeeded() {
+      if (renewalHandled) return;
+      const params = new URLSearchParams(window.location.search);
+      const cancelled = params.get('renew_cancel') === '1';
+      const shouldComplete = params.get('renew') === '1';
+      const renewalId = String(params.get('renewal') || '');
+      const sessionId = String(params.get('session_id') || '');
+      if (!cancelled && (!shouldComplete || !renewalId || !sessionId)) return;
+
+      renewalHandled = true;
+      if (cancelled) {
+        profileStatus.textContent = 'Förnyelsen avbröts.';
+        window.history.replaceState({}, '', `${window.location.pathname}#memberArea`);
+        return;
+      }
+
+      if (!authToken) return;
+      profileStatus.textContent = 'Verifierar betalning för förnyelse...';
+      try {
+        const payload = await apiPost('/api/payments/complete-renew', {
+          token: authToken,
+          renewalId,
+          sessionId
+        });
+        activeUser = payload.user || activeUser;
+        saveJsonStorage('naraAccount', activeUser);
+        refreshMembershipUi();
+        profileStatus.textContent = 'Medlemskapet är förnyat. Full tillgång är aktiv.';
+        window.history.replaceState({}, '', `${window.location.pathname}#memberArea`);
+      } catch (error) {
+        profileStatus.textContent = error.message || 'Kunde inte slutföra förnyelsen.';
+      }
     }
 
     function normalizeHexColor(value) {
@@ -1832,9 +1923,15 @@
       }
 
       setMemberMode(true);
-      memberGreeting.textContent = `Inloggad som ${activeUser.name}. Uppdatera din profil här.`;
+      memberGreeting.textContent = activeUser.hasAccess
+        ? `Inloggad som ${activeUser.name}. Uppdatera din profil här.`
+        : `Inloggad som ${activeUser.name}. Ditt medlemskap har gått ut, förnya för full tillgång.`;
+      refreshMembershipUi();
       setMailAlert(false);
       setActiveMemberPanel(localStorage.getItem('naraMemberPanel') || 'profile');
+
+      await completeRenewFromUrlIfNeeded();
+      if (!activeUser.hasAccess) return;
 
       await syncServerInbox();
       await syncServerChat();
@@ -1920,7 +2017,9 @@
         localStorage.setItem('naraAuthToken', authToken);
         saveJsonStorage('naraAccount', payload.user);
         setLoggedIn(true);
-        loginStatus.textContent = `Inloggad! Välkommen tillbaka, ${payload.user.name}.`;
+        loginStatus.textContent = payload.membershipExpired
+          ? `Inloggad som ${payload.user.name}. Medlemskapet har gått ut, förnya i profilen.`
+          : `Inloggad! Välkommen tillbaka, ${payload.user.name}.`;
         await activateMemberArea();
         memberArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
         loginForm.reset();
@@ -2002,6 +2101,24 @@
     searchForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       await renderSearchResults(searchInput.value || '');
+    });
+
+    renewMembershipBtn.addEventListener('click', async () => {
+      if (!authToken) return;
+      renewMembershipBtn.disabled = true;
+      profileStatus.textContent = 'Skickar dig till säker betalning...';
+      try {
+        const payload = await apiPost('/api/payments/create-renew-checkout', { token: authToken });
+        if (payload.checkoutUrl) {
+          window.location.href = payload.checkoutUrl;
+          return;
+        }
+        profileStatus.textContent = 'Kunde inte starta förnyelsen.';
+      } catch (error) {
+        profileStatus.textContent = error.message || 'Kunde inte starta förnyelsen.';
+      } finally {
+        renewMembershipBtn.disabled = false;
+      }
     });
 
     logoutBtn.addEventListener('click', async () => {
@@ -2107,12 +2224,14 @@
     });
 
     (async () => {
+      await completeRenewFromUrlIfNeeded();
       if (authToken) {
         try {
           const me = await apiGet(`/api/auth/me?token=${encodeURIComponent(authToken)}`);
           activeUser = me.user;
           setLoggedIn(true);
           saveJsonStorage('naraAccount', me.user);
+          refreshMembershipUi();
         } catch {
           setLoggedIn(false);
         }

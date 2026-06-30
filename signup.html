@@ -38,6 +38,15 @@
     }
     h1 { font-family: "Space Grotesk", sans-serif; margin-bottom: 8px; }
     p { color: var(--muted); margin-bottom: 14px; }
+    .price-box {
+      border: 1px solid #dfe7f3;
+      background: #f7fbff;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      color: #23405e;
+      font-weight: 600;
+    }
     form { display: grid; gap: 10px; }
     label { font-size: .92rem; font-weight: 600; }
     input {
@@ -72,7 +81,8 @@
 <body>
   <main class="card">
     <h1>Skapa konto</h1>
-    <p>Snabb registrering för att komma igång.</p>
+    <p>Skapa konto snabbt och enkelt.</p>
+    <div id="priceBox" class="price-box" hidden></div>
     <form id="signupForm">
       <label for="nameInput">Namn</label>
       <input id="nameInput" name="name" type="text" required placeholder="Ditt namn" />
@@ -80,7 +90,7 @@
       <input id="emailInput" name="email" type="email" required placeholder="du@email.se" />
       <label for="passwordInput">Lösenord</label>
       <input id="passwordInput" name="password" type="password" minlength="6" required placeholder="Minst 6 tecken" />
-      <button class="btn" type="submit">Skapa konto</button>
+      <button class="btn" id="submitBtn" type="submit">Skapa konto</button>
     </form>
     <p id="status"></p>
     <div class="row">
@@ -92,7 +102,70 @@
   <script>
     const form = document.getElementById('signupForm');
     const statusText = document.getElementById('status');
-    const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8080' : '';
+    const submitBtn = document.getElementById('submitBtn');
+    const priceBox = document.getElementById('priceBox');
+    const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8081' : '';
+    let paymentEnabled = false;
+    let signupPriceSek = 79;
+
+    async function apiPost(path, body) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Något gick fel.');
+      return payload;
+    }
+
+    async function loadPaymentConfig() {
+      try {
+        const response = await fetch(`${API_BASE}/api/payments/status`);
+        const payload = await response.json();
+        paymentEnabled = !!payload.enabled;
+        signupPriceSek = Number(payload.amountSek || 79);
+      } catch {
+        paymentEnabled = false;
+        signupPriceSek = 79;
+      }
+
+      if (paymentEnabled) {
+        priceBox.hidden = false;
+        priceBox.textContent = `${signupPriceSek} kr ger full tillgång i 1 månad.`;
+        submitBtn.textContent = `Betala ${signupPriceSek} kr för 1 månad`;
+      } else {
+        priceBox.hidden = true;
+        submitBtn.textContent = 'Skapa konto';
+      }
+    }
+
+    async function completePaidSignupFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('paid') !== '1') return;
+
+      const pendingId = String(params.get('pending') || '');
+      const sessionId = String(params.get('session_id') || '');
+      if (!pendingId || !sessionId) return;
+
+      statusText.textContent = 'Verifierar betalning och skapar konto...';
+      submitBtn.disabled = true;
+      try {
+        const payload = await apiPost('/api/payments/complete-signup', { pendingId, sessionId });
+        localStorage.setItem('naraAuthToken', payload.token);
+        localStorage.setItem('naraAccount', JSON.stringify(payload.user));
+        localStorage.setItem('naraSession', '1');
+        statusText.textContent = `Konto klart! Välkommen, ${payload.user.name}.`;
+        window.history.replaceState({}, '', `${window.location.pathname}`);
+        setTimeout(() => {
+          window.location.href = `${API_BASE || ''}/pip.html#memberArea`;
+        }, 800);
+      } catch (error) {
+        statusText.textContent = error.message || 'Kunde inte verifiera betalning.';
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -106,31 +179,38 @@
         return;
       }
 
+      submitBtn.disabled = true;
       try {
-        const response = await fetch(`${API_BASE}/api/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password })
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-          statusText.textContent = payload.error || 'Kunde inte skapa konto.';
-          return;
+        if (paymentEnabled) {
+          const payload = await apiPost('/api/payments/create-signup-checkout', { name, email, password });
+          if (payload.checkoutUrl) {
+            window.location.href = payload.checkoutUrl;
+            return;
+          }
+          statusText.textContent = 'Kunde inte starta betalning.';
+        } else {
+          const payload = await apiPost('/api/auth/register', { name, email, password });
+          localStorage.setItem('naraAuthToken', payload.token);
+          localStorage.setItem('naraAccount', JSON.stringify(payload.user));
+          localStorage.setItem('naraSession', '1');
+          statusText.textContent = `Konto skapat! Välkommen, ${payload.user.name}.`;
+          form.reset();
+          setTimeout(() => {
+            window.location.href = `${API_BASE || ''}/pip.html#memberArea`;
+          }, 700);
         }
-
-        localStorage.setItem('naraAuthToken', payload.token);
-        localStorage.setItem('naraAccount', JSON.stringify(payload.user));
-        localStorage.setItem('naraSession', '1');
-        statusText.textContent = `Konto skapat! Välkommen, ${payload.user.name}.`;
-        form.reset();
-
-        setTimeout(() => {
-          window.location.href = `${API_BASE || ''}/pip.html#memberArea`;
-        }, 700);
-      } catch {
-        statusText.textContent = 'Servern svarar inte. Starta servern och försök igen.';
+      } catch (error) {
+        statusText.textContent = error.message || 'Servern svarar inte. Starta servern och försök igen.';
+      } finally {
+        submitBtn.disabled = false;
       }
     });
+
+    loadPaymentConfig();
+    completePaidSignupFromUrl();
+    if (new URLSearchParams(window.location.search).get('cancel') === '1') {
+      statusText.textContent = 'Betalningen avbröts. Du kan försöka igen när du vill.';
+    }
   </script>
 </body>
 </html>
