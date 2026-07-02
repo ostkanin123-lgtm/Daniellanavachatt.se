@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const querystring = require('querystring');
-const { randomUUID } = require('crypto');
+const { randomUUID, createHash } = require('crypto');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8080;
 const ROOT = __dirname;
@@ -13,6 +13,8 @@ const STRIPE_SECRET_KEY = String(process.env.STRIPE_SECRET_KEY || '');
 const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || '').trim();
 const STRIPE_MONTHLY_PRICE_SEK = Number(process.env.STRIPE_MONTHLY_PRICE_SEK || process.env.STRIPE_SIGNUP_PRICE_SEK || 7900);
 const ACCESS_PERIOD_MS = 1000 * 60 * 60 * 24 * 30;
+const TRIAL_LIMIT_PER_IP = Number(process.env.TRIAL_LIMIT_PER_IP || 2);
+const TRIAL_PERIOD_MS = Number(process.env.TRIAL_PERIOD_MS || 1000 * 60 * 60 * 24 * 5);
 
 const rooms = new Map();
 const CORS_HEADERS = {
@@ -30,6 +32,9 @@ function defaultData() {
     users: [],
     profiles: {},
     inbox: {},
+    blocks: {},
+    verifications: {},
+    ipTrialUsage: {},
     sessions: {},
     pendingSignups: {},
     pendingRenewals: {},
@@ -118,10 +123,22 @@ function findUserByEmail(email) {
 }
 
 function userPublic(user) {
+  const now = Date.now();
+  const trialEndsAt = Number(user.trialEndsAt || 0);
   return {
     id: user.id,
     name: user.name,
     email: user.email,
+    phone: user.phone || '',
+    birthDate: user.birthDate || '',
+    birthPlace: user.birthPlace || '',
+    emailVerified: !!user.emailVerified,
+    phoneVerified: !!user.phoneVerified,
+    selfieVerified: !!user.selfieVerified,
+    trialCount: Number(user.trialCount || 0),
+    trialEndsAt,
+    trialRemainingMs: trialEndsAt > now ? trialEndsAt - now : 0,
+    trialLimit: TRIAL_LIMIT_PER_IP,
     createdAt: user.createdAt,
     paidMember: !!user.paidMember,
     paidUntilTs: Number(user.paidUntilTs || 0),
@@ -138,6 +155,8 @@ function membershipActive(user) {
   if (!user) return false;
   const paidUntilTs = Number(user.paidUntilTs || 0);
   if (paidUntilTs > Date.now()) return true;
+  const trialEndsAt = Number(user.trialEndsAt || 0);
+  if (trialEndsAt > Date.now()) return true;
   return !!user.paidMember && !paidUntilTs;
 }
 
@@ -211,6 +230,21 @@ function ensureInbox(userId) {
   return data.inbox[userId];
 }
 
+function ensureBlockList(userId) {
+  const key = String(userId);
+  if (!Array.isArray(data.blocks[key])) data.blocks[key] = [];
+  return data.blocks[key];
+}
+
+function isBlocked(blockerUserId, targetUserId) {
+  const list = ensureBlockList(blockerUserId);
+  return list.includes(Number(targetUserId));
+}
+
+function isBlockedEither(a, b) {
+  return isBlocked(a, b) || isBlocked(b, a);
+}
+
 function addInboxMessage(userId, fromName, subject, message) {
   const inbox = ensureInbox(userId);
   inbox.unshift({
@@ -224,18 +258,121 @@ function addInboxMessage(userId, fromName, subject, message) {
   scheduleSave();
 }
 
-function createUser({ name, email, password, paidMember, paidUntilTs }) {
+function clientIpFromReq(req) {
+  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const xri = String(req.headers['x-real-ip'] || '').trim();
+  const raw = xff || xri || String((req.socket && req.socket.remoteAddress) || '');
+  const unwrapped = raw.replace(/^::ffff:/, '').trim();
+  return unwrapped || '0.0.0.0';
+}
+
+function hashIp(ip) {
+  return createHash('sha256').update(String(ip || '')).digest('hex');
+}
+
+function getIpTrialRecord(req) {
+  const ipHash = hashIp(clientIpFromReq(req));
+  if (!data.ipTrialUsage[ipHash]) {
+    data.ipTrialUsage[ipHash] = { count: 0, updatedAt: nowIso() };
+  }
+  return { ipHash, rec: data.ipTrialUsage[ipHash] };
+}
+
+function canUseTrial(req, user) {
+  const { rec } = getIpTrialRecord(req);
+  const userTrials = Number((user && user.trialCount) || 0);
+  const ipTrials = Number(rec.count || 0);
+  const remainingByIp = Math.max(0, TRIAL_LIMIT_PER_IP - ipTrials);
+  const remainingByUser = Math.max(0, TRIAL_LIMIT_PER_IP - userTrials);
+  return {
+    ok: remainingByIp > 0 && remainingByUser > 0,
+    remainingByIp,
+    remainingByUser
+  };
+}
+
+function consumeTrial(req, user) {
+  const trialCheck = canUseTrial(req, user);
+  if (!trialCheck.ok) {
+    return { ok: false, error: 'Gratis testperioder är slut för denna anslutning.' };
+  }
+  const { rec } = getIpTrialRecord(req);
+  rec.count = Number(rec.count || 0) + 1;
+  rec.updatedAt = nowIso();
+  user.trialCount = Number(user.trialCount || 0) + 1;
+  user.trialEndsAt = Date.now() + TRIAL_PERIOD_MS;
+  scheduleSave();
+  return { ok: true };
+}
+
+function ensureVerificationState(userId) {
+  const key = String(userId);
+  if (!data.verifications[key]) {
+    data.verifications[key] = {
+      email: { code: '', expiresAt: 0 },
+      sms: { code: '', expiresAt: 0 }
+    };
+  }
+  return data.verifications[key];
+}
+
+function parseBirthData(body) {
+  const birthDate = String(body.birthDate || '').trim();
+  const birthPlace = String(body.birthPlace || '').trim().slice(0, 80);
+  if (!birthDate || !birthPlace) {
+    return { ok: false, error: 'Fyll i födelsedatum och var du är född.' };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+    return { ok: false, error: 'Födelsedatum måste vara i formatet YYYY-MM-DD.' };
+  }
+  const ts = Date.parse(`${birthDate}T00:00:00Z`);
+  if (!Number.isFinite(ts) || ts > Date.now()) {
+    return { ok: false, error: 'Ogiltigt födelsedatum.' };
+  }
+  return { ok: true, birthDate, birthPlace };
+}
+
+function ageFromBirthDate(birthDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(birthDate || ''))) return '';
+  const [y, m, d] = String(birthDate).split('-').map((n) => Number(n));
+  if (!y || !m || !d) return '';
+  const now = new Date();
+  let age = now.getUTCFullYear() - y;
+  const monthDiff = (now.getUTCMonth() + 1) - m;
+  const dayDiff = now.getUTCDate() - d;
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+  if (!Number.isFinite(age) || age < 0 || age > 130) return '';
+  return String(age);
+}
+
+function parsePhone(phone) {
+  const raw = String(phone || '').trim();
+  const normalized = raw.replace(/[^\d+]/g, '');
+  if (!normalized || normalized.length < 7) return { ok: false, error: 'Fyll i ett giltigt telefonnummer.' };
+  return { ok: true, phone: normalized.slice(0, 20) };
+}
+
+function createUser({ name, email, password, phone, birthDate, birthPlace, paidMember, paidUntilTs }) {
+  const initialAge = ageFromBirthDate(birthDate);
   const user = {
     id: data.nextIds.user++,
     name,
     email,
     password,
+    phone: String(phone || ''),
+    birthDate: String(birthDate || ''),
+    birthPlace: String(birthPlace || ''),
+    emailVerified: false,
+    phoneVerified: false,
+    selfieVerified: false,
+    trialCount: 0,
+    trialEndsAt: 0,
     paidMember: !!paidMember,
     paidUntilTs: Number(paidUntilTs || 0),
     createdAt: nowIso()
   };
   data.users.push(user);
-  data.profiles[user.id] = { age: '', bio: '', imageData: '', updatedAt: nowIso() };
+  data.profiles[user.id] = { age: initialAge, bio: '', imageData: '', updatedAt: nowIso() };
   addInboxMessage(user.id, 'Nara Team', 'Välkommen till Nara', `Kul att du är här, ${name}!`);
   scheduleSave();
   return user;
@@ -281,23 +418,39 @@ function stripeRequest(method, endpoint, formBody) {
 }
 
 function handleRegister(req, res, body) {
-  if (paymentEnabled()) {
-    return json(res, 403, { error: 'Registrering sker via betalningsflödet.' });
-  }
+  const trialRequested = !!body.startTrial;
 
   const name = String(body.name || '').trim();
   const email = normalizeEmail(body.email);
   const password = String(body.password || '');
+  const phoneInfo = parsePhone(body.phone);
+  const birthInfo = parseBirthData(body);
 
-  if (!name || !email || password.length < 6) {
-    return json(res, 400, { error: 'Ogiltiga uppgifter.' });
+  if (!name || !email || password.length < 6 || !birthInfo.ok || !phoneInfo.ok) {
+    return json(res, 400, { error: birthInfo.error || phoneInfo.error || 'Ogiltiga uppgifter.' });
   }
 
   if (findUserByEmail(email)) {
     return json(res, 409, { error: 'E-post används redan.' });
   }
 
-  const user = createUser({ name, email, password, paidMember: false });
+  const user = createUser({
+    name,
+    email,
+    password,
+    phone: phoneInfo.phone,
+    birthDate: birthInfo.birthDate,
+    birthPlace: birthInfo.birthPlace,
+    paidMember: false
+  });
+  if (paymentEnabled() && trialRequested) {
+    const trial = consumeTrial(req, user);
+    if (!trial.ok) {
+      data.users = data.users.filter((u) => Number(u.id) !== Number(user.id));
+      delete data.profiles[user.id];
+      return json(res, 403, { error: trial.error });
+    }
+  }
   const token = createSession(user.id);
   json(res, 200, { token, user: userPublic(user) });
 }
@@ -319,9 +472,11 @@ async function handleCreateSignupCheckout(req, res, body) {
   const name = String(body.name || '').trim();
   const email = normalizeEmail(body.email);
   const password = String(body.password || '');
+  const phoneInfo = parsePhone(body.phone);
+  const birthInfo = parseBirthData(body);
 
-  if (!name || !email || password.length < 6) {
-    return json(res, 400, { error: 'Ogiltiga uppgifter.' });
+  if (!name || !email || password.length < 6 || !birthInfo.ok || !phoneInfo.ok) {
+    return json(res, 400, { error: birthInfo.error || phoneInfo.error || 'Ogiltiga uppgifter.' });
   }
   if (findUserByEmail(email)) {
     return json(res, 409, { error: 'E-post används redan.' });
@@ -333,6 +488,9 @@ async function handleCreateSignupCheckout(req, res, body) {
     name,
     email,
     password,
+    phone: phoneInfo.phone,
+    birthDate: birthInfo.birthDate,
+    birthPlace: birthInfo.birthPlace,
     createdAt: nowIso(),
     expiresAt: Date.now() + 1000 * 60 * 30,
     status: 'pending'
@@ -388,6 +546,9 @@ async function handleCompleteSignup(req, res, body) {
     name: pending.name,
     email: pending.email,
     password: pending.password,
+    phone: pending.phone,
+    birthDate: pending.birthDate,
+    birthPlace: pending.birthPlace,
     paidMember: true,
     paidUntilTs: Date.now() + ACCESS_PERIOD_MS
   });
@@ -468,6 +629,102 @@ async function handleCompleteRenew(req, res, body) {
   json(res, 200, { ok: true, user: userPublic(auth.user) });
 }
 
+function verificationComplete(user) {
+  return !!user.emailVerified && !!user.phoneVerified && !!user.selfieVerified;
+}
+
+function randomCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function handleVerifyStatus(req, res, body, urlObj) {
+  const auth = authFrom(req, body, urlObj, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  json(res, 200, {
+    emailVerified: !!auth.user.emailVerified,
+    phoneVerified: !!auth.user.phoneVerified,
+    selfieVerified: !!auth.user.selfieVerified,
+    complete: verificationComplete(auth.user)
+  });
+}
+
+function handleVerifyEmailSend(req, res, body) {
+  const auth = authFrom(req, body, null, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  const state = ensureVerificationState(auth.user.id);
+  const code = randomCode();
+  state.email = { code, expiresAt: Date.now() + 1000 * 60 * 10 };
+  addInboxMessage(auth.user.id, 'Nara Verify', 'E-postkod', `Din kod är: ${code}`);
+  scheduleSave();
+  json(res, 200, { ok: true, message: 'Kod skickad till din verifieringsbrevlåda.' });
+}
+
+function handleVerifyEmailConfirm(req, res, body) {
+  const auth = authFrom(req, body, null, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  const code = String(body.code || '').trim();
+  const state = ensureVerificationState(auth.user.id);
+  if (!code || Date.now() > Number(state.email.expiresAt || 0) || code !== String(state.email.code || '')) {
+    return json(res, 400, { error: 'Fel eller utgången e-postkod.' });
+  }
+  auth.user.emailVerified = true;
+  state.email = { code: '', expiresAt: 0 };
+  scheduleSave();
+  json(res, 200, { ok: true, user: userPublic(auth.user) });
+}
+
+function handleVerifySmsSend(req, res, body) {
+  const auth = authFrom(req, body, null, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  const state = ensureVerificationState(auth.user.id);
+  const code = randomCode();
+  state.sms = { code, expiresAt: Date.now() + 1000 * 60 * 10 };
+  addInboxMessage(auth.user.id, 'Nara Verify', 'SMS-kod', `Din SMS-kod är: ${code}`);
+  scheduleSave();
+  json(res, 200, { ok: true, message: 'SMS-kod skickad (demo i brevlådan).' });
+}
+
+function handleVerifySmsConfirm(req, res, body) {
+  const auth = authFrom(req, body, null, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  const code = String(body.code || '').trim();
+  const state = ensureVerificationState(auth.user.id);
+  if (!code || Date.now() > Number(state.sms.expiresAt || 0) || code !== String(state.sms.code || '')) {
+    return json(res, 400, { error: 'Fel eller utgången SMS-kod.' });
+  }
+  auth.user.phoneVerified = true;
+  state.sms = { code: '', expiresAt: 0 };
+  scheduleSave();
+  json(res, 200, { ok: true, user: userPublic(auth.user) });
+}
+
+function handleVerifySelfie(req, res, body) {
+  const auth = authFrom(req, body, null, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  const imageData = String(body.imageData || '').slice(0, 500_000);
+  if (!imageData.startsWith('data:image/')) {
+    return json(res, 400, { error: 'Ogiltig selfie-bild.' });
+  }
+  const profile = data.profiles[auth.user.id] || { age: '', bio: '', imageData: '' };
+  profile.selfieData = imageData;
+  profile.updatedAt = nowIso();
+  data.profiles[auth.user.id] = profile;
+  auth.user.selfieVerified = true;
+  scheduleSave();
+  json(res, 200, { ok: true, user: userPublic(auth.user) });
+}
+
+function handleTrialStart(req, res, body) {
+  const auth = authFrom(req, body, null, { allowExpiredMembership: true });
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  if (membershipActive(auth.user)) {
+    return json(res, 400, { error: 'Du har redan aktiv tillgång.' });
+  }
+  const trial = consumeTrial(req, auth.user);
+  if (!trial.ok) return json(res, 403, { error: trial.error });
+  json(res, 200, { ok: true, user: userPublic(auth.user) });
+}
+
 function handleLogin(req, res, body) {
   const email = normalizeEmail(body.email);
   const password = String(body.password || '');
@@ -499,6 +756,11 @@ function handleProfileGet(req, res, body, urlObj) {
   const auth = authFrom(req, body, urlObj);
   if (!auth.ok) return json(res, 401, { error: auth.error });
   const profile = data.profiles[auth.user.id] || { age: '', bio: '', imageData: '' };
+  if (!profile.age && auth.user.birthDate) {
+    profile.age = ageFromBirthDate(auth.user.birthDate);
+    data.profiles[auth.user.id] = profile;
+    scheduleSave();
+  }
   json(res, 200, { profile });
 }
 
@@ -536,7 +798,7 @@ function handleChatSend(req, res, body) {
   if (data.chat.length > 500) data.chat = data.chat.slice(-500);
 
   data.users.forEach((u) => {
-    if (u.id !== auth.user.id) {
+    if (u.id !== auth.user.id && !isBlockedEither(auth.user.id, u.id)) {
       addInboxMessage(u.id, auth.user.name, 'Nytt chattmeddelande', text.slice(0, 140));
     }
   });
@@ -548,7 +810,9 @@ function handleChatGet(req, res, body, urlObj) {
   const auth = authFrom(req, body, urlObj);
   if (!auth.ok) return json(res, 401, { error: auth.error });
   const sinceId = Number(urlObj.searchParams.get('sinceId') || '0');
-  const messages = data.chat.filter((m) => m.id > sinceId).slice(-120);
+  const messages = data.chat
+    .filter((m) => m.id > sinceId && !isBlockedEither(auth.user.id, m.fromUserId))
+    .slice(-120);
   const latestId = data.chat.length ? data.chat[data.chat.length - 1].id : sinceId;
   json(res, 200, { messages, latestId });
 }
@@ -571,6 +835,7 @@ function handleOnline(req, res, body, urlObj) {
     if (now - Number(session.lastSeen || 0) > 15000) return;
     const user = data.users.find((u) => u.id === session.userId);
     if (!user) return;
+    if (isBlockedEither(auth.user.id, user.id)) return;
     const prev = activeUsers.get(user.id);
     if (!prev || Number(session.lastSeen) > Number(prev.lastSeen)) {
       activeUsers.set(user.id, { id: user.id, name: user.name, lastSeen: session.lastSeen });
@@ -597,12 +862,56 @@ function handleUserSearch(req, res, body, urlObj) {
       };
     })
     .filter((u) => {
+      if (Number(u.id) === Number(auth.user.id)) return false;
+      if (isBlockedEither(auth.user.id, u.id)) return false;
       if (!q) return true;
       return u.name.toLowerCase().includes(q) || String(u.bio).toLowerCase().includes(q);
     })
     .slice(0, 30);
 
   json(res, 200, { users });
+}
+
+function handleBlockedGet(req, res, body, urlObj) {
+  const auth = authFrom(req, body, urlObj);
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  const blockedIds = ensureBlockList(auth.user.id);
+  const users = blockedIds
+    .map((id) => data.users.find((u) => Number(u.id) === Number(id)))
+    .filter(Boolean)
+    .map((u) => ({ id: u.id, name: u.name, email: u.email }));
+  json(res, 200, { users });
+}
+
+function handleBlockUser(req, res, body) {
+  const auth = authFrom(req, body, null);
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  const targetUserId = Number(body.targetUserId || 0);
+  if (!targetUserId || targetUserId === auth.user.id) {
+    return json(res, 400, { error: 'Ogiltig användare.' });
+  }
+  const target = data.users.find((u) => Number(u.id) === targetUserId);
+  if (!target) return json(res, 404, { error: 'Användaren hittades inte.' });
+  const list = ensureBlockList(auth.user.id);
+  if (!list.includes(targetUserId)) list.push(targetUserId);
+
+  data.dms = data.dms.filter((m) => {
+    const a = Number(m.fromUserId);
+    const b = Number(m.toUserId);
+    return !((a === Number(auth.user.id) && b === targetUserId) || (a === targetUserId && b === Number(auth.user.id)));
+  });
+  scheduleSave();
+  json(res, 200, { ok: true });
+}
+
+function handleUnblockUser(req, res, body) {
+  const auth = authFrom(req, body, null);
+  if (!auth.ok) return json(res, 401, { error: auth.error });
+  const targetUserId = Number(body.targetUserId || 0);
+  const list = ensureBlockList(auth.user.id);
+  data.blocks[String(auth.user.id)] = list.filter((id) => Number(id) !== targetUserId);
+  scheduleSave();
+  json(res, 200, { ok: true });
 }
 
 function dmKey(a, b) {
@@ -617,6 +926,9 @@ function handleDmThread(req, res, body, urlObj) {
   const withUserId = Number(urlObj.searchParams.get('withUserId') || '0');
   if (!withUserId || withUserId === auth.user.id) {
     return json(res, 400, { error: 'Ogiltig mottagare.' });
+  }
+  if (isBlockedEither(auth.user.id, withUserId)) {
+    return json(res, 403, { error: 'Du kan inte chatta med denna användare.' });
   }
 
   const key = dmKey(auth.user.id, withUserId);
@@ -637,6 +949,9 @@ function handleDmSend(req, res, body) {
 
   const recipient = data.users.find((u) => Number(u.id) === toUserId);
   if (!recipient) return json(res, 404, { error: 'Mottagare hittades inte.' });
+  if (isBlockedEither(auth.user.id, toUserId)) {
+    return json(res, 403, { error: 'Meddelande blockerat.' });
+  }
 
   const item = {
     id: data.nextIds.dm++,
@@ -832,6 +1147,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/auth/login') return handleLogin(req, res, await parseBody(req));
     if (req.method === 'GET' && pathname === '/api/auth/me') return handleMe(req, res, {}, urlObj);
     if (req.method === 'POST' && pathname === '/api/auth/logout') return handleLogout(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/auth/trial/start') return handleTrialStart(req, res, await parseBody(req));
+    if (req.method === 'GET' && pathname === '/api/verify/status') return handleVerifyStatus(req, res, {}, urlObj);
+    if (req.method === 'POST' && pathname === '/api/verify/email/send') return handleVerifyEmailSend(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/verify/email/confirm') return handleVerifyEmailConfirm(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/verify/sms/send') return handleVerifySmsSend(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/verify/sms/confirm') return handleVerifySmsConfirm(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/verify/selfie') return handleVerifySelfie(req, res, await parseBody(req));
 
     if (req.method === 'GET' && pathname === '/api/profile') return handleProfileGet(req, res, {}, urlObj);
     if (req.method === 'POST' && pathname === '/api/profile/save') return handleProfileSave(req, res, await parseBody(req));
@@ -844,6 +1166,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/online') return handleOnline(req, res, {}, urlObj);
 
     if (req.method === 'GET' && pathname === '/api/users/search') return handleUserSearch(req, res, {}, urlObj);
+    if (req.method === 'GET' && pathname === '/api/users/blocked') return handleBlockedGet(req, res, {}, urlObj);
+    if (req.method === 'POST' && pathname === '/api/users/block') return handleBlockUser(req, res, await parseBody(req));
+    if (req.method === 'POST' && pathname === '/api/users/unblock') return handleUnblockUser(req, res, await parseBody(req));
     if (req.method === 'GET' && pathname === '/api/dm/thread') return handleDmThread(req, res, {}, urlObj);
     if (req.method === 'POST' && pathname === '/api/dm/send') return handleDmSend(req, res, await parseBody(req));
 

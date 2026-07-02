@@ -9,27 +9,27 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #f7f3ec;
-      --paper: #fffaf2;
-      --ink: #1f2025;
-      --muted: #5d6370;
-      --primary: #136f63;
-      --primary-2: #f2a65a;
-      --accent: #2e86ab;
+      --bg: #eaf4ff;
+      --paper: #f5faff;
+      --ink: #10233d;
+      --muted: #3f5f80;
+      --primary: #1c67c9;
+      --primary-2: #62b8ff;
+      --accent: #2aa0ff;
       --card: #ffffff;
-      --line: #e8dfd1;
+      --line: #cfe3f8;
       --shadow: 0 20px 40px rgba(24, 28, 35, 0.08);
       --radius-xl: 26px;
       --radius-lg: 18px;
       --radius-md: 12px;
-      --bg-layer-1: radial-gradient(circle at 15% 20%, rgba(46, 134, 171, 0.15), transparent 35%);
-      --bg-layer-2: radial-gradient(circle at 85% 10%, rgba(242, 166, 90, 0.2), transparent 40%);
-      --bg-layer-3: linear-gradient(180deg, #fdf8ee 0%, #f6f1e8 100%);
-      --menu-bg: #fffaf2;
-      --menu-border: #e8dfd1;
-      --menu-link: #5d6370;
-      --frame-color: #e8dfd1;
-      --input-border: #d8dfeb;
+      --bg-layer-1: radial-gradient(circle at 12% 18%, rgba(52, 145, 255, 0.25), transparent 36%);
+      --bg-layer-2: radial-gradient(circle at 82% 12%, rgba(88, 183, 255, 0.24), transparent 40%);
+      --bg-layer-3: linear-gradient(180deg, #e9f4ff 0%, #d9edff 100%);
+      --menu-bg: #f5faff;
+      --menu-border: #cfe3f8;
+      --menu-link: #3f5f80;
+      --frame-color: #cfe3f8;
+      --input-border: #b9d5f1;
     }
 
     * {
@@ -46,6 +46,7 @@
       color: var(--ink);
       min-height: 100vh;
       overflow-x: hidden;
+      position: relative;
     }
 
     body[data-theme="dark"] {
@@ -160,7 +161,108 @@
       box-shadow: inset 0 0 0 1px #d7e2ee;
     }
 
-    main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 70px; }
+    main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 70px; position: relative; z-index: 2; }
+
+    .playful-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .volcano {
+      position: absolute;
+      bottom: -26px;
+      width: 220px;
+      height: 170px;
+      background: linear-gradient(180deg, #6b4f3f 0%, #4d3527 100%);
+      clip-path: polygon(8% 100%, 50% 15%, 92% 100%);
+      opacity: .3;
+      animation: bob 7s ease-in-out infinite;
+    }
+
+    .volcano::before {
+      content: "";
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      width: 34px;
+      height: 18px;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: #ff5d3b;
+      box-shadow: 0 0 16px rgba(255, 93, 59, .8);
+    }
+
+    .volcano.left { left: -35px; animation-delay: .2s; }
+    .volcano.right { right: -20px; width: 260px; height: 190px; animation-delay: 1.3s; }
+
+    .heart {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: #ff5f93;
+      transform: rotate(45deg);
+      border-radius: 6px;
+      animation: floatUp 10s linear infinite;
+      opacity: .75;
+    }
+
+    .heart::before,
+    .heart::after {
+      content: "";
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #ff5f93;
+    }
+
+    .heart::before { top: -14px; left: 0; }
+    .heart::after { left: -14px; top: 0; }
+    .heart.h1 { left: 14%; bottom: 12%; animation-delay: 0s; }
+    .heart.h2 { left: 75%; bottom: 8%; animation-delay: 2.7s; }
+    .heart.h3 { left: 56%; bottom: 5%; animation-delay: 5.1s; }
+
+    .laugh-face {
+      position: absolute;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffe998, #ffc439);
+      border: 3px solid rgba(220, 159, 23, .45);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, .12);
+      animation: bob 5.4s ease-in-out infinite;
+    }
+
+    .laugh-face::before,
+    .laugh-face::after {
+      content: "";
+      position: absolute;
+      top: 22px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4a3413;
+    }
+
+    .laugh-face::before { left: 19px; }
+    .laugh-face::after { right: 19px; }
+
+    .laugh-face span {
+      position: absolute;
+      left: 50%;
+      bottom: 17px;
+      width: 34px;
+      height: 16px;
+      transform: translateX(-50%);
+      border-bottom: 5px solid #4a3413;
+      border-radius: 0 0 24px 24px;
+    }
+
+    .laugh-face.f1 { top: 130px; left: 4%; animation-delay: .6s; }
+    .laugh-face.f2 { top: 220px; right: 7%; animation-delay: 1.8s; }
 
     .hero {
       display: grid;
@@ -651,26 +753,79 @@
       border-color: #6ca9c3;
     }
 
+    .chat-shell {
+      border: 1px solid var(--frame-color);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fbfdff 0%, #f3f8ff 100%);
+      padding: 10px;
+    }
+
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 6px 4px;
+    }
+
+    .chat-header strong {
+      font-size: .98rem;
+      letter-spacing: .2px;
+    }
+
+    .chat-badge {
+      font-size: .76rem;
+      font-weight: 700;
+      color: #125192;
+      border: 1px solid #b8d8fa;
+      background: #e8f3ff;
+      border-radius: 999px;
+      padding: 4px 9px;
+    }
+
     .chat-messages {
       display: grid;
-      gap: 8px;
+      gap: 10px;
       margin-bottom: 10px;
-      max-height: 190px;
+      height: 290px;
       overflow: auto;
-      padding-right: 2px;
+      padding-right: 4px;
+      align-content: start;
     }
 
     .chat-bubble {
-      border-radius: 11px;
-      padding: 9px 11px;
-      background: #eff4fb;
-      border: 1px solid #dbe7f4;
-      font-size: .93rem;
+      max-width: 84%;
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #ffffff;
+      border: 1px solid #d8e8fa;
+      font-size: .94rem;
+      box-shadow: 0 6px 16px rgba(18, 52, 96, .08);
+    }
+
+    .chat-bubble b {
+      display: block;
+      font-size: .8rem;
+      color: #3f5f80;
+      margin-bottom: 2px;
     }
 
     .chat-bubble.me {
-      background: #dff5ef;
-      border-color: #bbe8da;
+      margin-left: auto;
+      background: linear-gradient(180deg, #2a92ff 0%, #1b7ae2 100%);
+      border-color: #1f74cc;
+      color: #fff;
+    }
+
+    .chat-bubble.me b {
+      color: #d7eaff;
+    }
+
+    .chat-input-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
     }
 
     .search-results {
@@ -689,6 +844,41 @@
     .search-item b {
       display: block;
       margin-bottom: 2px;
+    }
+
+    .search-item-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .search-item-actions input[type="text"],
+    .search-item-actions input[type="file"] {
+      border: 1px solid var(--input-border);
+      border-radius: 9px;
+      padding: 6px 9px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .btn-small {
+      border: 1px solid #c8d9ed;
+      background: #fff;
+      color: #2f4866;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font: inherit;
+      font-size: .84rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-small.warn {
+      border-color: #f1b6b0;
+      color: #a73022;
+      background: #fff5f4;
     }
 
     .online-meta {
@@ -741,10 +931,71 @@
       margin-left: 8px;
     }
 
+    .safety-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .video-panel {
+      border: 1px solid var(--frame-color);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fbfdff 0%, #f1f7ff 100%);
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .video-controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .video-card {
+      border: 1px solid var(--frame-color);
+      border-radius: 12px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .video-card h4 {
+      font-size: .9rem;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+
+    .video-el {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 10px;
+      background: #0f1726;
+      object-fit: cover;
+      border: 1px solid #213754;
+    }
+
+    .video-status {
+      min-height: 18px;
+      font-size: .9rem;
+      color: #24466e;
+      font-weight: 600;
+    }
+
     .dm-layout {
       display: grid;
       grid-template-columns: 240px 1fr;
       gap: 12px;
+      border: 1px solid var(--frame-color);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fbfdff 0%, #f3f8ff 100%);
+      padding: 10px;
     }
 
     .dm-users {
@@ -764,6 +1015,7 @@
       padding: 8px 10px;
       font: inherit;
       cursor: pointer;
+      font-weight: 600;
     }
 
     .dm-user-btn.active {
@@ -791,16 +1043,31 @@
     }
 
     .dm-bubble {
-      border-radius: 11px;
-      padding: 8px 10px;
-      background: #edf3fb;
-      border: 1px solid #dbe7f4;
-      font-size: .92rem;
+      max-width: 84%;
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #ffffff;
+      border: 1px solid #d8e8fa;
+      font-size: .94rem;
+      box-shadow: 0 6px 16px rgba(18, 52, 96, .08);
+    }
+
+    .dm-bubble b {
+      display: block;
+      font-size: .8rem;
+      color: #3f5f80;
+      margin-bottom: 2px;
     }
 
     .dm-bubble.me {
-      background: #dff5ef;
-      border-color: #bbe8da;
+      margin-left: auto;
+      background: linear-gradient(180deg, #2a92ff 0%, #1b7ae2 100%);
+      border-color: #1f74cc;
+      color: #fff;
+    }
+
+    .dm-bubble.me b {
+      color: #d7eaff;
     }
 
     @media (max-width: 760px) {
@@ -916,10 +1183,20 @@
     .delay-3 { animation-delay: .45s; }
 
     @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(0) rotate(45deg); opacity: .7; }
+      85% { opacity: .9; }
+      100% { transform: translateY(-220px) rotate(45deg); opacity: 0; }
+    }
 
     @media (max-width: 980px) {
       .hero { grid-template-columns: 1fr; }
       .grid { grid-template-columns: repeat(2, 1fr); }
+      .laugh-face { display: none; }
     }
 
     @media (max-width: 640px) {
@@ -933,13 +1210,18 @@
       .stat-row { gap: 12px; }
       .hero-actions .btn { width: 100%; }
       .design-grid { grid-template-columns: 1fr; }
+      .volcano { opacity: .2; }
+      .chat-input-row { grid-template-columns: 1fr; }
+      .chat-messages { height: 240px; }
+      .video-controls { grid-template-columns: 1fr; }
+      .video-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><span class="dot"></span> Nara</div>
+      <div class="brand"><span class="dot"></span> Välkommen till Nara Chatt</div>
       <nav class="nav landing-only">
         <a href="#funktioner">Funktioner</a>
         <a href="#hur">Hur det funkar</a>
@@ -952,15 +1234,25 @@
       </div>
     </div>
   </header>
+  <div class="playful-bg landing-only" aria-hidden="true">
+    <div class="volcano left"></div>
+    <div class="volcano right"></div>
+    <div class="heart h1"></div>
+    <div class="heart h2"></div>
+    <div class="heart h3"></div>
+    <div class="laugh-face f1"><span></span></div>
+    <div class="laugh-face f2"><span></span></div>
+  </div>
 
   <main>
     <section class="hero landing-only">
       <article class="hero-panel fade-up">
         <div class="eyebrow">Nästa generations sociala plats</div>
-        <h1>Mer äkta vänner. Mindre brus.</h1>
+        <h1>Välkommen till Nara Chatt</h1>
         <p class="lead">Nara är byggd för riktiga relationer: mindre jagande efter likes och mer plats för samtal, intressen och aktiviteter man faktiskt vill dela med andra.</p>
         <div class="hero-actions">
           <a class="btn btn-primary btn-link" href="signup.html">Bli medlem gratis</a>
+          <a class="btn btn-ghost btn-link" id="payNowLink" href="https://buy.stripe.com/fZubJ1btQ4oD9pkdPebMQ00" target="_blank" rel="noopener noreferrer" style="display:none;">Betala nu</a>
         </div>
         <div class="stat-row">
           <div class="stat"><strong>12 400+</strong><span>Aktiva grupper</span></div>
@@ -975,11 +1267,7 @@
           <p style="color: var(--muted); line-height: 1.5;">Hitta folk med samma musiksmak, spelintresse eller träningsmål pa ett par klick.</p>
         </div>
         <div class="card">
-          <div class="chat-list">
-            <div class="chat"><b>Filmkvall Stockholm</b><small>31 nya inlägg</small></div>
-            <div class="chat"><b>Retrospel & LAN</b><small>9 nya inlägg</small></div>
-            <div class="chat"><b>Löpning 5 km</b><small>14 deltagare nu</small></div>
-          </div>
+          <p style="color: var(--muted); line-height: 1.55;">Här hittar du medlemmar, profiler och chatt i realtid - enkelt och tryggt.</p>
         </div>
       </aside>
     </section>
@@ -1047,6 +1335,9 @@
         <button class="member-tab" type="button" data-member-tab="pm">PM</button>
         <button class="member-tab" type="button" data-member-tab="online">Online</button>
         <button class="member-tab" type="button" data-member-tab="search">Sök profil</button>
+        <button class="member-tab" type="button" data-member-tab="verify">Verifiering</button>
+        <button class="member-tab" type="button" data-member-tab="video">Video</button>
+        <button class="member-tab" type="button" data-member-tab="safety">Trygghet</button>
         <button class="member-tab" type="button" data-member-tab="design">Design</button>
       </div>
 
@@ -1056,7 +1347,8 @@
         <div class="member-plan-box">
           <div class="member-plan-title">Medlemskap</div>
           <div class="member-plan-meta" id="memberPlanStatus">Kontrollerar status...</div>
-          <button class="btn btn-primary" id="renewMembershipBtn" type="button">Förnya medlemskap (79 kr / månad)</button>
+          <button class="btn btn-primary" id="renewMembershipBtn" type="button">Förnya medlemskap 79 kr/månad</button>
+          <a class="btn btn-ghost btn-link" href="https://buy.stripe.com/fZubJ1btQ4oD9pkdPebMQ00" target="_blank" rel="noopener noreferrer">Förnya medlemskap 79 kr/månad</a>
         </div>
         <div class="avatar-row">
           <img class="avatar-preview" id="avatarPreview" alt="Profilbild" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='36' fill='%23e7edf6'/%3E%3Ccircle cx='36' cy='29' r='13' fill='%23b6c4d7'/%3E%3Crect x='14' y='47' width='44' height='19' rx='9.5' fill='%23b6c4d7'/%3E%3C/svg%3E" />
@@ -1080,16 +1372,23 @@
 
       <article class="card member-card member-panel" data-member-panel="chat">
         <h3>Chatt</h3>
-        <p>Snabb chatt direkt i ditt konto.</p>
-        <div class="chat-messages" id="chatMessages"></div>
-        <form class="member-form" id="chatForm">
-          <input id="chatInput" type="text" placeholder="Skriv ett meddelande..." required />
-          <button class="btn btn-primary" type="submit">Skicka</button>
-        </form>
+        <p>Modern chatt med tydliga bubblor och snabb respons.</p>
+        <div class="chat-shell">
+          <div class="chat-header">
+            <strong>Live Chatt</strong>
+            <span class="chat-badge">Aktiv nu</span>
+          </div>
+          <div class="chat-messages" id="chatMessages"></div>
+          <form class="member-form chat-input-row" id="chatForm">
+            <input id="chatInput" type="text" placeholder="Skriv ett meddelande..." required />
+            <button class="btn btn-primary" type="submit">Skicka</button>
+          </form>
+        </div>
       </article>
 
       <article class="card member-card member-panel" data-member-panel="pm">
         <h3>Privata Meddelanden</h3>
+        <p>Swipe-känsla i konversationer: välj person och skriv direkt.</p>
         <div class="dm-layout">
           <div>
             <p class="online-meta">Välj en person att chatta med.</p>
@@ -1120,6 +1419,70 @@
           <button class="btn btn-primary" type="submit">Sök</button>
         </form>
         <div class="search-results" id="searchResults"></div>
+      </article>
+
+      <article class="card member-card member-panel" data-member-panel="verify">
+        <h3>Verifiering</h3>
+        <p>Bekräfta e-post, telefon (SMS-kod) och selfie.</p>
+        <div class="safety-list">
+          <div class="search-item">
+            <b>E-postverifiering</b>
+            <p id="verifyEmailState">Inte verifierad.</p>
+            <div class="search-item-actions">
+              <button class="btn-small" type="button" id="sendEmailCodeBtn">Skicka kod</button>
+              <input id="emailCodeInput" type="text" placeholder="6-siffrig kod" />
+              <button class="btn-small" type="button" id="confirmEmailCodeBtn">Bekräfta</button>
+            </div>
+          </div>
+          <div class="search-item">
+            <b>SMS-kod (2FA)</b>
+            <p id="verifySmsState">Inte verifierad.</p>
+            <div class="search-item-actions">
+              <button class="btn-small" type="button" id="sendSmsCodeBtn">Skicka SMS-kod</button>
+              <input id="smsCodeInput" type="text" placeholder="6-siffrig kod" />
+              <button class="btn-small" type="button" id="confirmSmsCodeBtn">Bekräfta</button>
+            </div>
+          </div>
+          <div class="search-item">
+            <b>Selfie-verifiering</b>
+            <p id="verifySelfieState">Inte verifierad.</p>
+            <div class="search-item-actions">
+              <input id="selfieInput" type="file" accept="image/*" />
+              <button class="btn-small" type="button" id="uploadSelfieBtn">Ladda upp selfie</button>
+            </div>
+          </div>
+          <p class="profile-status" id="verifyStatusText"></p>
+        </div>
+      </article>
+
+      <article class="card member-card member-panel" data-member-panel="video">
+        <h3>Live Video</h3>
+        <p>Starta kamera och gå med i ett videosamtal med rumskod.</p>
+        <div class="video-panel">
+          <div class="video-controls">
+            <input id="videoRoomInput" type="text" placeholder="Rumskod, t.ex. nara2026" />
+            <button class="btn btn-ghost" type="button" id="videoCameraBtn">Starta kamera</button>
+            <button class="btn btn-primary" type="button" id="videoJoinBtn">Gå med</button>
+            <button class="btn btn-ghost" type="button" id="videoLeaveBtn">Lämna</button>
+          </div>
+          <div class="video-status" id="videoStatus">Inte ansluten.</div>
+          <div class="video-grid">
+            <div class="video-card">
+              <h4>Du</h4>
+              <video class="video-el" id="localVideo" autoplay muted playsinline></video>
+            </div>
+            <div class="video-card">
+              <h4>Andra personen</h4>
+              <video class="video-el" id="remoteVideo" autoplay playsinline></video>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card member-card member-panel" data-member-panel="safety">
+        <h3>Trygghet</h3>
+        <p>Blockera personer som beter sig dåligt. De kan då inte chatta med dig.</p>
+        <div class="safety-list" id="blockedUsersList"></div>
       </article>
 
       <article class="card member-card member-panel" data-member-panel="design">
@@ -1172,6 +1535,12 @@
       <form class="signup-form" id="signupForm">
         <label for="nameInput">Namn</label>
         <input id="nameInput" name="name" type="text" placeholder="Ditt namn" required />
+        <label for="phoneInputModal">Telefonnummer</label>
+        <input id="phoneInputModal" name="phone" type="tel" placeholder="Exempel: +46701234567" required />
+        <label for="birthPlaceInputModal">Född i</label>
+        <input id="birthPlaceInputModal" name="birthPlace" type="text" placeholder="Exempel: Stockholm" required />
+        <label for="birthDateInputModal">Födelsedatum</label>
+        <input id="birthDateInputModal" name="birthDate" type="date" required />
         <label for="emailInput">E-post</label>
         <input id="emailInput" name="email" type="email" placeholder="du@email.se" required />
         <label for="passwordInput">Lösenord</label>
@@ -1232,6 +1601,8 @@
     const profileStatus = document.getElementById('profileStatus');
     const memberPlanStatus = document.getElementById('memberPlanStatus');
     const renewMembershipBtn = document.getElementById('renewMembershipBtn');
+    const payNowLink = document.getElementById('payNowLink');
+    let trialMembershipBtn = null;
     const mailList = document.getElementById('mailList');
     const mailCard = document.getElementById('mailCard');
     const mailAlertDot = document.getElementById('mailAlertDot');
@@ -1247,6 +1618,26 @@
     const searchForm = document.getElementById('searchForm');
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
+    const verifyEmailState = document.getElementById('verifyEmailState');
+    const verifySmsState = document.getElementById('verifySmsState');
+    const verifySelfieState = document.getElementById('verifySelfieState');
+    const verifyStatusText = document.getElementById('verifyStatusText');
+    const sendEmailCodeBtn = document.getElementById('sendEmailCodeBtn');
+    const confirmEmailCodeBtn = document.getElementById('confirmEmailCodeBtn');
+    const sendSmsCodeBtn = document.getElementById('sendSmsCodeBtn');
+    const confirmSmsCodeBtn = document.getElementById('confirmSmsCodeBtn');
+    const emailCodeInput = document.getElementById('emailCodeInput');
+    const smsCodeInput = document.getElementById('smsCodeInput');
+    const selfieInput = document.getElementById('selfieInput');
+    const uploadSelfieBtn = document.getElementById('uploadSelfieBtn');
+    const videoRoomInput = document.getElementById('videoRoomInput');
+    const videoCameraBtn = document.getElementById('videoCameraBtn');
+    const videoJoinBtn = document.getElementById('videoJoinBtn');
+    const videoLeaveBtn = document.getElementById('videoLeaveBtn');
+    const videoStatus = document.getElementById('videoStatus');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const blockedUsersList = document.getElementById('blockedUsersList');
     const onlineList = document.getElementById('onlineList');
     const onlineMeta = document.getElementById('onlineMeta');
     const themeButtons = document.querySelectorAll('[data-theme-value]');
@@ -1262,9 +1653,28 @@
     let latestChatId = 0;
     let latestDmId = 0;
     let dmUsersCache = [];
+    let blockedUsersCache = [];
     let selectedDmUserId = 0;
     let lastInboxCount = 0;
     let renewalHandled = false;
+    let localMediaStream = null;
+    let remoteMediaStream = null;
+    let rtcPeer = null;
+    let callRoomCode = '';
+    let callClientId = '';
+    let callRole = '';
+    let callPeerId = '';
+    let callLastSeq = 0;
+    let callPollTimer = null;
+    let callOfferSent = false;
+    let verifyState = { emailVerified: false, phoneVerified: false, selfieVerified: false, complete: false };
+
+    const rtcConfig = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
 
     setInterval(() => {
       i = (i + 1) % quotes.length;
@@ -1335,6 +1745,218 @@
       return payload;
     }
 
+    function renderVerifyState() {
+      verifyEmailState.textContent = verifyState.emailVerified ? 'Verifierad' : 'Inte verifierad';
+      verifySmsState.textContent = verifyState.phoneVerified ? 'Verifierad' : 'Inte verifierad';
+      verifySelfieState.textContent = verifyState.selfieVerified ? 'Verifierad' : 'Inte verifierad';
+    }
+
+    async function syncVerifyState() {
+      if (!isLoggedIn()) return;
+      try {
+        const payload = await apiGet(`/api/verify/status?token=${encodeURIComponent(authToken)}`);
+        verifyState = {
+          emailVerified: !!payload.emailVerified,
+          phoneVerified: !!payload.phoneVerified,
+          selfieVerified: !!payload.selfieVerified,
+          complete: !!payload.complete
+        };
+        renderVerifyState();
+      } catch {}
+    }
+
+    function setVideoStatus(text) {
+      videoStatus.textContent = text;
+    }
+
+    async function ensureLocalMedia() {
+      if (localMediaStream) return localMediaStream;
+      localMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localMediaStream;
+      return localMediaStream;
+    }
+
+    function resetRemoteVideo() {
+      if (remoteMediaStream) {
+        remoteMediaStream.getTracks().forEach((t) => t.stop());
+      }
+      remoteMediaStream = null;
+      remoteVideo.srcObject = null;
+    }
+
+    function cleanupRtcPeer() {
+      if (rtcPeer) {
+        rtcPeer.onicecandidate = null;
+        rtcPeer.ontrack = null;
+        rtcPeer.onconnectionstatechange = null;
+        try { rtcPeer.close(); } catch {}
+      }
+      rtcPeer = null;
+      callOfferSent = false;
+      callPeerId = '';
+      resetRemoteVideo();
+    }
+
+    function cleanupCallState() {
+      if (callPollTimer) {
+        clearInterval(callPollTimer);
+        callPollTimer = null;
+      }
+      callRoomCode = '';
+      callClientId = '';
+      callRole = '';
+      callLastSeq = 0;
+      cleanupRtcPeer();
+    }
+
+    async function stopLocalMedia() {
+      if (localMediaStream) {
+        localMediaStream.getTracks().forEach((t) => t.stop());
+      }
+      localMediaStream = null;
+      localVideo.srcObject = null;
+    }
+
+    function createRtcPeer() {
+      cleanupRtcPeer();
+      const peer = new RTCPeerConnection(rtcConfig);
+      rtcPeer = peer;
+
+      if (localMediaStream) {
+        localMediaStream.getTracks().forEach((track) => peer.addTrack(track, localMediaStream));
+      }
+
+      peer.onicecandidate = async (event) => {
+        if (!event.candidate || !callClientId || !callRoomCode) return;
+        try {
+          await apiPost('/api/signal', {
+            roomCode: callRoomCode,
+            clientId: callClientId,
+            to: callPeerId || 'peer',
+            type: 'candidate',
+            payload: event.candidate
+          });
+        } catch {}
+      };
+
+      peer.ontrack = (event) => {
+        const [stream] = event.streams;
+        if (stream) {
+          remoteMediaStream = stream;
+          remoteVideo.srcObject = stream;
+          setVideoStatus('Videosamtal aktivt.');
+        }
+      };
+
+      peer.onconnectionstatechange = () => {
+        const state = String(peer.connectionState || '');
+        if (state === 'connected') setVideoStatus('Videosamtal aktivt.');
+        if (state === 'disconnected' || state === 'failed') {
+          setVideoStatus('Samtalet avbröts. Försök igen.');
+        }
+      };
+    }
+
+    async function sendRtcSignal(type, payload, to = 'peer') {
+      if (!callRoomCode || !callClientId) return;
+      await apiPost('/api/signal', {
+        roomCode: callRoomCode,
+        clientId: callClientId,
+        to,
+        type,
+        payload
+      });
+    }
+
+    async function maybeCreateOffer() {
+      if (!rtcPeer || !callPeerId || callOfferSent || callRole !== 'host') return;
+      const offer = await rtcPeer.createOffer();
+      await rtcPeer.setLocalDescription(offer);
+      await sendRtcSignal('offer', offer, callPeerId);
+      callOfferSent = true;
+      setVideoStatus('Ringer upp...');
+    }
+
+    async function handleRtcEvent(eventItem) {
+      if (!rtcPeer) return;
+      const type = String(eventItem.type || '');
+      const payload = eventItem.payload || {};
+      const from = String(eventItem.from || '');
+      if (from) callPeerId = from;
+
+      if (type === 'offer') {
+        await rtcPeer.setRemoteDescription(new RTCSessionDescription(payload));
+        const answer = await rtcPeer.createAnswer();
+        await rtcPeer.setLocalDescription(answer);
+        await sendRtcSignal('answer', answer, from || 'peer');
+        setVideoStatus('Samtal anslutet...');
+      } else if (type === 'answer') {
+        await rtcPeer.setRemoteDescription(new RTCSessionDescription(payload));
+      } else if (type === 'candidate' && payload) {
+        try {
+          await rtcPeer.addIceCandidate(new RTCIceCandidate(payload));
+        } catch {}
+      } else if (type === 'peer-left') {
+        setVideoStatus('Den andra lämnade samtalet.');
+        cleanupRtcPeer();
+        createRtcPeer();
+      }
+    }
+
+    async function pollVideoSignals() {
+      if (!callRoomCode || !callClientId) return;
+      try {
+        const payload = await apiGet(`/api/poll?roomCode=${encodeURIComponent(callRoomCode)}&clientId=${encodeURIComponent(callClientId)}&since=${callLastSeq}`);
+        callLastSeq = Number(payload.now || callLastSeq || 0);
+        const peers = Array.isArray(payload.peers) ? payload.peers : [];
+        const other = peers.find((p) => String(p.id) !== String(callClientId));
+        if (other) callPeerId = String(other.id);
+        if (callRole === 'host' && other) await maybeCreateOffer();
+
+        const events = Array.isArray(payload.events) ? payload.events : [];
+        for (const e of events) {
+          await handleRtcEvent(e);
+        }
+      } catch {}
+    }
+
+    async function joinVideoCall() {
+      if (!isLoggedIn()) {
+        setVideoStatus('Logga in först.');
+        return;
+      }
+      const code = String(videoRoomInput.value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      if (!code) {
+        setVideoStatus('Skriv en rumskod först.');
+        return;
+      }
+
+      await ensureLocalMedia();
+      cleanupCallState();
+      createRtcPeer();
+
+      const joined = await apiPost('/api/join', { roomCode: code });
+      callRoomCode = joined.roomCode;
+      callClientId = joined.clientId;
+      callRole = joined.role;
+      callLastSeq = 0;
+      callPollTimer = setInterval(pollVideoSignals, 700);
+      videoRoomInput.value = callRoomCode;
+      setVideoStatus(callRole === 'host' ? 'Väntar på en person till...' : 'Ansluten till rummet.');
+      await pollVideoSignals();
+    }
+
+    async function leaveVideoCall(stopCamera = false) {
+      if (callRoomCode && callClientId) {
+        try {
+          await apiPost('/api/leave', { roomCode: callRoomCode, clientId: callClientId });
+        } catch {}
+      }
+      cleanupCallState();
+      if (stopCamera) await stopLocalMedia();
+      setVideoStatus('Inte ansluten.');
+    }
+
     function formatPaidUntil(ts) {
       const n = Number(ts || 0);
       if (!n) return 'Inte aktivt just nu.';
@@ -1349,19 +1971,49 @@
       }
     }
 
+    function formatRemaining(ms) {
+      const total = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+      const days = Math.floor(total / 86400);
+      const hours = Math.floor((total % 86400) / 3600);
+      const minutes = Math.floor((total % 3600) / 60);
+      return `${days}d ${hours}h ${minutes}m`;
+    }
+
     function refreshMembershipUi() {
       if (!activeUser) {
         memberPlanStatus.textContent = 'Inte inloggad.';
         renewMembershipBtn.style.display = 'none';
+        if (trialMembershipBtn) trialMembershipBtn.style.display = 'none';
+        if (payNowLink) payNowLink.style.display = 'none';
         return;
       }
-      const untilText = formatPaidUntil(activeUser.paidUntilTs);
-      if (activeUser.hasAccess) {
+
+      const now = Date.now();
+      const paidUntilTs = Number(activeUser.paidUntilTs || 0);
+      const trialEndsAt = Number(activeUser.trialEndsAt || 0);
+      const trialActive = trialEndsAt > now;
+      const paidActive = paidUntilTs > now;
+      const trialUsed = Number(activeUser.trialCount || 0) > 0;
+      const untilText = formatPaidUntil(paidUntilTs);
+
+      if (trialActive) {
+        memberPlanStatus.textContent = `Gratis 5 dagar aktiverad. Tid kvar: ${formatRemaining(trialEndsAt - now)}.`;
+      } else if (paidActive || activeUser.hasAccess) {
         memberPlanStatus.textContent = `Full tillgång aktiv till ${untilText}.`;
       } else {
-        memberPlanStatus.textContent = `Medlemskapet har gått ut (${untilText}). Förnya för full tillgång i 1 månad.`;
+        memberPlanStatus.textContent = trialUsed
+          ? 'Gratisdagarna är slut. Förnya medlemskap för 79 kr/månad.'
+          : 'Aktivera 5 gratis dagar nu för att börja chatta.';
       }
-      renewMembershipBtn.style.display = 'inline-flex';
+
+      if (trialMembershipBtn) {
+        trialMembershipBtn.style.display = (!activeUser.hasAccess && !trialUsed && !paidActive) ? 'inline-flex' : 'none';
+        trialMembershipBtn.textContent = 'Aktivera 5 gratis dagar nu';
+      }
+
+      const showPaidOptions = (!activeUser.hasAccess && trialUsed && !trialActive);
+      renewMembershipBtn.style.display = showPaidOptions ? 'inline-flex' : 'none';
+      if (payNowLink) payNowLink.style.display = showPaidOptions ? 'inline-flex' : 'none';
     }
 
     async function completeRenewFromUrlIfNeeded() {
@@ -1395,6 +2047,20 @@
         window.history.replaceState({}, '', `${window.location.pathname}#memberArea`);
       } catch (error) {
         profileStatus.textContent = error.message || 'Kunde inte slutföra förnyelsen.';
+      }
+    }
+
+    async function startTrialMembership() {
+      if (!authToken) return;
+      try {
+        const payload = await apiPost('/api/auth/trial/start', { token: authToken });
+        activeUser = payload.user || activeUser;
+        saveJsonStorage('naraAccount', activeUser);
+        refreshMembershipUi();
+        profileStatus.textContent = 'Gratis testperiod startad.';
+        await activateMemberArea();
+      } catch (error) {
+        profileStatus.textContent = error.message || 'Kunde inte starta testperiod.';
       }
     }
 
@@ -1897,11 +2563,79 @@
             <b>${p.name}</b>
             <span>Ålder: ${p.age || '-'}</span>
             <p>${p.bio || 'Ingen bio ännu.'}</p>
+            <div class="search-item-actions">
+              <button class="btn-small warn" type="button" data-block-user="${p.id}">Blockera</button>
+            </div>
           </div>
         `).join('');
+
+        searchResults.querySelectorAll('[data-block-user]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = Number(btn.getAttribute('data-block-user') || '0');
+            if (!id || !isLoggedIn()) return;
+            btn.disabled = true;
+            try {
+              await apiPost('/api/users/block', { token: authToken, targetUserId: id });
+              profileStatus.textContent = 'Användaren är blockerad.';
+              await syncBlockedUsers();
+              await renderSearchResults(searchInput.value || '');
+              await syncDmUsers();
+            } catch (error) {
+              profileStatus.textContent = error.message || 'Kunde inte blockera användaren.';
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        });
       } catch {
         searchResults.innerHTML = '<div class="search-item">Kunde inte söka profiler just nu.</div>';
       }
+    }
+
+    async function syncBlockedUsers() {
+      if (!isLoggedIn()) return;
+      try {
+        const payload = await apiGet(`/api/users/blocked?token=${encodeURIComponent(authToken)}`);
+        blockedUsersCache = Array.isArray(payload.users) ? payload.users : [];
+      } catch {
+        blockedUsersCache = [];
+      }
+      renderBlockedUsers();
+    }
+
+    function renderBlockedUsers() {
+      if (!blockedUsersCache.length) {
+        blockedUsersList.innerHTML = '<div class="search-item">Inga blockerade användare just nu.</div>';
+        return;
+      }
+      blockedUsersList.innerHTML = blockedUsersCache.map((u) => `
+        <div class="search-item">
+          <b>${u.name}</b>
+          <span>${u.email || ''}</span>
+          <div class="search-item-actions">
+            <button class="btn-small" type="button" data-unblock-user="${u.id}">Avblockera</button>
+          </div>
+        </div>
+      `).join('');
+
+      blockedUsersList.querySelectorAll('[data-unblock-user]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = Number(btn.getAttribute('data-unblock-user') || '0');
+          if (!id || !isLoggedIn()) return;
+          btn.disabled = true;
+          try {
+            await apiPost('/api/users/unblock', { token: authToken, targetUserId: id });
+            profileStatus.textContent = 'Användaren är avblockerad.';
+            await syncBlockedUsers();
+            await renderSearchResults(searchInput.value || '');
+            await syncDmUsers();
+          } catch (error) {
+            profileStatus.textContent = error.message || 'Kunde inte avblockera.';
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
     }
 
     async function activateMemberArea() {
@@ -1937,6 +2671,8 @@
       await syncServerChat();
       await syncDmUsers();
       await syncDmThread();
+      await syncBlockedUsers();
+      await syncVerifyState();
       await renderSearchResults();
       await updateMyPresence();
       await renderOnlineUsers();
@@ -1956,6 +2692,7 @@
     const savedUiColors = loadUiColors();
     if (savedUiColors) applyUiColors(savedUiColors);
     else syncUiInputs(getThemeColorSnapshot());
+    renderVerifyState();
 
     openButtons.forEach((btn) => btn.addEventListener('click', openSignup));
     loginButtons.forEach((btn) => btn.addEventListener('click', (event) => {
@@ -1981,21 +2718,24 @@
       event.preventDefault();
       const formData = new FormData(signupForm);
       const name = String(formData.get('name') || '').trim();
+      const phone = String(formData.get('phone') || '').trim();
+      const birthPlace = String(formData.get('birthPlace') || '').trim();
+      const birthDate = String(formData.get('birthDate') || '').trim();
       const email = String(formData.get('email') || '').trim();
       const password = String(formData.get('password') || '');
 
-      if (!name || !email || password.length < 6) {
+      if (!name || !phone || !birthPlace || !birthDate || !email || password.length < 6) {
         signupSuccess.textContent = 'Fyll i alla fält korrekt för att fortsätta.';
         return;
       }
 
       try {
-        const payload = await apiPost('/api/auth/register', { name, email, password });
+        const payload = await apiPost('/api/auth/register', { name, phone, birthPlace, birthDate, email, password });
         authToken = payload.token;
         localStorage.setItem('naraAuthToken', authToken);
         saveJsonStorage('naraAccount', payload.user);
         setLoggedIn(true);
-        signupSuccess.textContent = `Konto skapat! Välkommen, ${payload.user.name}.`;
+        signupSuccess.textContent = `Konto skapat! Välkommen, ${payload.user.name}. Aktivera 5 gratis dagar i profilfliken.`;
         signupForm.reset();
         await activateMemberArea();
         memberArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2079,6 +2819,10 @@
       const text = String(chatInput.value || '').trim();
       if (!text) return;
       if (!isLoggedIn()) return;
+      if (!activeUser || !activeUser.hasAccess) {
+        profileStatus.textContent = 'Aktivera 5 gratis dagar eller medlemskap innan du kan skriva i chatten.';
+        return;
+      }
       try {
         await apiPost('/api/chat/send', { token: authToken, text });
         chatInput.value = '';
@@ -2090,6 +2834,10 @@
       event.preventDefault();
       const text = String(dmInput.value || '').trim();
       if (!text || !selectedDmUserId || !isLoggedIn()) return;
+      if (!activeUser || !activeUser.hasAccess) {
+        profileStatus.textContent = 'Aktivera 5 gratis dagar eller medlemskap innan du kan skriva PM.';
+        return;
+      }
       try {
         await apiPost('/api/dm/send', { token: authToken, toUserId: selectedDmUserId, text });
         dmInput.value = '';
@@ -2101,6 +2849,120 @@
     searchForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       await renderSearchResults(searchInput.value || '');
+    });
+
+    sendEmailCodeBtn.addEventListener('click', async () => {
+      if (!isLoggedIn()) return;
+      sendEmailCodeBtn.disabled = true;
+      try {
+        await apiPost('/api/verify/email/send', { token: authToken });
+        verifyStatusText.textContent = 'E-postkod skickad till brevlådan i appen.';
+      } catch (error) {
+        verifyStatusText.textContent = error.message || 'Kunde inte skicka e-postkod.';
+      } finally {
+        sendEmailCodeBtn.disabled = false;
+      }
+    });
+
+    confirmEmailCodeBtn.addEventListener('click', async () => {
+      if (!isLoggedIn()) return;
+      const code = String(emailCodeInput.value || '').trim();
+      if (!code) return;
+      confirmEmailCodeBtn.disabled = true;
+      try {
+        const payload = await apiPost('/api/verify/email/confirm', { token: authToken, code });
+        activeUser = payload.user || activeUser;
+        saveJsonStorage('naraAccount', activeUser);
+        verifyStatusText.textContent = 'E-post verifierad.';
+        emailCodeInput.value = '';
+        await syncVerifyState();
+      } catch (error) {
+        verifyStatusText.textContent = error.message || 'Fel e-postkod.';
+      } finally {
+        confirmEmailCodeBtn.disabled = false;
+      }
+    });
+
+    sendSmsCodeBtn.addEventListener('click', async () => {
+      if (!isLoggedIn()) return;
+      sendSmsCodeBtn.disabled = true;
+      try {
+        await apiPost('/api/verify/sms/send', { token: authToken });
+        verifyStatusText.textContent = 'SMS-kod skickad (demo i brevlådan).';
+      } catch (error) {
+        verifyStatusText.textContent = error.message || 'Kunde inte skicka SMS-kod.';
+      } finally {
+        sendSmsCodeBtn.disabled = false;
+      }
+    });
+
+    confirmSmsCodeBtn.addEventListener('click', async () => {
+      if (!isLoggedIn()) return;
+      const code = String(smsCodeInput.value || '').trim();
+      if (!code) return;
+      confirmSmsCodeBtn.disabled = true;
+      try {
+        const payload = await apiPost('/api/verify/sms/confirm', { token: authToken, code });
+        activeUser = payload.user || activeUser;
+        saveJsonStorage('naraAccount', activeUser);
+        verifyStatusText.textContent = 'SMS verifierad.';
+        smsCodeInput.value = '';
+        await syncVerifyState();
+      } catch (error) {
+        verifyStatusText.textContent = error.message || 'Fel SMS-kod.';
+      } finally {
+        confirmSmsCodeBtn.disabled = false;
+      }
+    });
+
+    uploadSelfieBtn.addEventListener('click', async () => {
+      if (!isLoggedIn()) return;
+      const file = selfieInput.files && selfieInput.files[0];
+      if (!file) {
+        verifyStatusText.textContent = 'Välj en selfie-bild först.';
+        return;
+      }
+      uploadSelfieBtn.disabled = true;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const imageData = String(reader.result || '');
+          const payload = await apiPost('/api/verify/selfie', { token: authToken, imageData });
+          activeUser = payload.user || activeUser;
+          saveJsonStorage('naraAccount', activeUser);
+          verifyStatusText.textContent = 'Selfie verifierad.';
+          await syncVerifyState();
+        } catch (error) {
+          verifyStatusText.textContent = error.message || 'Kunde inte verifiera selfie.';
+        } finally {
+          uploadSelfieBtn.disabled = false;
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    videoCameraBtn.addEventListener('click', async () => {
+      try {
+        await ensureLocalMedia();
+        setVideoStatus('Kamera startad.');
+      } catch {
+        setVideoStatus('Kunde inte starta kamera/mikrofon.');
+      }
+    });
+
+    videoJoinBtn.addEventListener('click', async () => {
+      try {
+        videoJoinBtn.disabled = true;
+        await joinVideoCall();
+      } catch (error) {
+        setVideoStatus(error.message || 'Kunde inte ansluta videosamtal.');
+      } finally {
+        videoJoinBtn.disabled = false;
+      }
+    });
+
+    videoLeaveBtn.addEventListener('click', async () => {
+      await leaveVideoCall(false);
     });
 
     renewMembershipBtn.addEventListener('click', async () => {
@@ -2121,7 +2983,17 @@
       }
     });
 
+    trialMembershipBtn = document.createElement('button');
+    trialMembershipBtn.className = 'btn btn-ghost';
+    trialMembershipBtn.type = 'button';
+    trialMembershipBtn.id = 'trialMembershipBtn';
+    trialMembershipBtn.style.display = 'none';
+    trialMembershipBtn.textContent = 'Aktivera 5 gratis dagar nu';
+    renewMembershipBtn.insertAdjacentElement('afterend', trialMembershipBtn);
+    trialMembershipBtn.addEventListener('click', startTrialMembership);
+
     logoutBtn.addEventListener('click', async () => {
+      await leaveVideoCall(true);
       try {
         if (authToken) await apiPost('/api/auth/logout', { token: authToken });
       } catch {}
@@ -2132,6 +3004,8 @@
       localStorage.removeItem('naraSession');
       localStorage.removeItem('naraDmMessages');
       localStorage.removeItem('naraDmTarget');
+      blockedUsersCache = [];
+      renderBlockedUsers();
       selectedDmUserId = 0;
       latestDmId = 0;
       dmUsersCache = [];
@@ -2151,6 +3025,12 @@
           await syncDmUsers();
           await syncDmThread();
         }
+        if (panelName === 'safety') {
+          await syncBlockedUsers();
+        }
+        if (panelName === 'verify') {
+          await syncVerifyState();
+        }
       });
     });
 
@@ -2159,6 +3039,12 @@
       if (event.key === 'naraAuthToken') {
         authToken = localStorage.getItem('naraAuthToken') || '';
         activateMemberArea();
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (callRoomCode && callClientId) {
+        navigator.sendBeacon(`${API_BASE}/api/leave`, JSON.stringify({ roomCode: callRoomCode, clientId: callClientId }));
       }
     });
 
@@ -2171,8 +3057,14 @@
         await syncServerChat();
         await syncDmUsers();
         await syncDmThread();
+        await syncBlockedUsers();
+        await syncVerifyState();
       }
     }, 1800);
+
+    setInterval(() => {
+      if (isLoggedIn() && activeUser) refreshMembershipUi();
+    }, 1000);
 
     themeButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -2241,3 +3133,4 @@
   </script>
 </body>
 </html>
+

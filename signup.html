@@ -86,11 +86,18 @@
     <form id="signupForm">
       <label for="nameInput">Namn</label>
       <input id="nameInput" name="name" type="text" required placeholder="Ditt namn" />
+      <label for="phoneInput">Telefonnummer</label>
+      <input id="phoneInput" name="phone" type="tel" required placeholder="Exempel: +46701234567" />
+      <label for="birthPlaceInput">Född i</label>
+      <input id="birthPlaceInput" name="birthPlace" type="text" required placeholder="Exempel: Stockholm" />
+      <label for="birthDateInput">Födelsedatum</label>
+      <input id="birthDateInput" name="birthDate" type="date" required />
       <label for="emailInput">E-post</label>
       <input id="emailInput" name="email" type="email" required placeholder="du@email.se" />
       <label for="passwordInput">Lösenord</label>
       <input id="passwordInput" name="password" type="password" minlength="6" required placeholder="Minst 6 tecken" />
       <button class="btn" id="submitBtn" type="submit">Skapa konto</button>
+      <button class="btn" id="payDirectBtn" type="button" style="display:none;background:linear-gradient(135deg,#204e9e,#2e86ab);">Betala och skapa direkt</button>
     </form>
     <p id="status"></p>
     <div class="row">
@@ -103,6 +110,7 @@
     const form = document.getElementById('signupForm');
     const statusText = document.getElementById('status');
     const submitBtn = document.getElementById('submitBtn');
+    const payDirectBtn = document.getElementById('payDirectBtn');
     const priceBox = document.getElementById('priceBox');
     const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8081' : '';
     let paymentEnabled = false;
@@ -132,11 +140,14 @@
 
       if (paymentEnabled) {
         priceBox.hidden = false;
-        priceBox.textContent = `${signupPriceSek} kr ger full tillgång i 1 månad.`;
-        submitBtn.textContent = `Betala ${signupPriceSek} kr för 1 månad`;
+        priceBox.textContent = `Skapa konto först. Aktivera sedan 5 gratis dagar i profilen innan du kan skriva till andra.`;
+        submitBtn.textContent = 'Skapa konto';
+        payDirectBtn.style.display = 'inline-block';
+        payDirectBtn.textContent = `Betala ${signupPriceSek} kr direkt`;
       } else {
         priceBox.hidden = true;
         submitBtn.textContent = 'Skapa konto';
+        payDirectBtn.style.display = 'none';
       }
     }
 
@@ -171,10 +182,13 @@
       event.preventDefault();
       const data = new FormData(form);
       const name = String(data.get('name') || '').trim();
+      const phone = String(data.get('phone') || '').trim();
+      const birthPlace = String(data.get('birthPlace') || '').trim();
+      const birthDate = String(data.get('birthDate') || '').trim();
       const email = String(data.get('email') || '').trim();
       const password = String(data.get('password') || '');
 
-      if (!name || !email || password.length < 6) {
+      if (!name || !phone || !birthPlace || !birthDate || !email || password.length < 6) {
         statusText.textContent = 'Fyll i alla fält korrekt.';
         return;
       }
@@ -182,14 +196,17 @@
       submitBtn.disabled = true;
       try {
         if (paymentEnabled) {
-          const payload = await apiPost('/api/payments/create-signup-checkout', { name, email, password });
-          if (payload.checkoutUrl) {
-            window.location.href = payload.checkoutUrl;
-            return;
-          }
-          statusText.textContent = 'Kunde inte starta betalning.';
+          const payload = await apiPost('/api/auth/register', { name, phone, birthPlace, birthDate, email, password });
+          localStorage.setItem('naraAuthToken', payload.token);
+          localStorage.setItem('naraAccount', JSON.stringify(payload.user));
+          localStorage.setItem('naraSession', '1');
+          statusText.textContent = `Konto skapat! Välkommen, ${payload.user.name}. Aktivera 5 gratis dagar i profilen.`;
+          form.reset();
+          setTimeout(() => {
+            window.location.href = `${API_BASE || ''}/pip.html#memberArea`;
+          }, 700);
         } else {
-          const payload = await apiPost('/api/auth/register', { name, email, password });
+          const payload = await apiPost('/api/auth/register', { name, phone, birthPlace, birthDate, email, password });
           localStorage.setItem('naraAuthToken', payload.token);
           localStorage.setItem('naraAccount', JSON.stringify(payload.user));
           localStorage.setItem('naraSession', '1');
@@ -203,6 +220,29 @@
         statusText.textContent = error.message || 'Servern svarar inte. Starta servern och försök igen.';
       } finally {
         submitBtn.disabled = false;
+      }
+    });
+
+    payDirectBtn.addEventListener('click', async () => {
+      const data = new FormData(form);
+      const name = String(data.get('name') || '').trim();
+      const phone = String(data.get('phone') || '').trim();
+      const birthPlace = String(data.get('birthPlace') || '').trim();
+      const birthDate = String(data.get('birthDate') || '').trim();
+      const email = String(data.get('email') || '').trim();
+      const password = String(data.get('password') || '');
+      if (!name || !phone || !birthPlace || !birthDate || !email || password.length < 6) {
+        statusText.textContent = 'Fyll i alla fält korrekt.';
+        return;
+      }
+      payDirectBtn.disabled = true;
+      try {
+        const payload = await apiPost('/api/payments/create-signup-checkout', { name, phone, birthPlace, birthDate, email, password });
+        if (payload.checkoutUrl) window.location.href = payload.checkoutUrl;
+      } catch (error) {
+        statusText.textContent = error.message || 'Kunde inte starta betalning.';
+      } finally {
+        payDirectBtn.disabled = false;
       }
     });
 
